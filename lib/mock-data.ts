@@ -42,6 +42,14 @@ export interface MockWordSetDetails extends MockWordSet {
   wordsList: MockWord[];
 }
 
+export interface MockWordSetSummary {
+  id: string;
+  title: string;
+  description: string;
+  words: number;
+  assignedClasses: number;
+}
+
 export interface MockProblemWord {
   id: string;
   term: string;
@@ -270,6 +278,17 @@ export const mockWordSetDetails: MockWordSetDetails[] = [
     ],
   },
 ];
+
+export const mockWordSetSummaries: MockWordSetSummary[] = mockWordSetDetails.map(
+  (wordSet) => ({
+    id: wordSet.id,
+    title: wordSet.title,
+    description: wordSet.description,
+    words: wordSet.words,
+    assignedClasses: mockClasses.filter((classItem) => classItem.wordSets > 0)
+      .length,
+  }),
+);
 
 const defaultProblemWords: MockProblemWord[] = [
   {

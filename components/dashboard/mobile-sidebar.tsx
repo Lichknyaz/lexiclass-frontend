@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, BookOpen, BarChart3, LogOut, X } from "lucide-react";
+import { Menu, BookOpen, BarChart3, LogOut, X, List } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: BookOpen, label: "Classes", href: "/teacher/dashboard" },
+  { icon: List, label: "Word Sets", href: "/teacher/word-sets" },
   { icon: BarChart3, label: "Analytics", href: "/teacher/analytics" },
 ];
 
@@ -67,8 +68,7 @@ export function MobileSidebar() {
               item.href === "/teacher/dashboard"
                 ? pathname === "/" ||
                   pathname === "/teacher/dashboard" ||
-                  pathname.startsWith("/teacher/classes") ||
-                  pathname.startsWith("/teacher/word-sets")
+                  pathname.startsWith("/teacher/classes")
                 : pathname.startsWith(item.href);
 
             return (

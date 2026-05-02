@@ -212,7 +212,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                     {classDetails.wordSetsList.map((wordSet) => (
                       <Link
                         key={wordSet.id}
-                        href={`/teacher/word-sets/${wordSet.id}`}
+                        href={`/teacher/word-sets/${wordSet.id}?from=class`}
                         className="rounded-lg border p-4 transition-colors hover:bg-muted/40"
                       >
                         <div className="flex items-start justify-between gap-3">

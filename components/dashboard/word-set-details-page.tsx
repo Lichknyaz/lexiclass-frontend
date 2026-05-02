@@ -32,9 +32,15 @@ import type { MockWord, MockWordSetDetails } from "@/lib/mock-data";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;
+  backHref: string;
+  backLabel: string;
 }
 
-export function WordSetDetailsPage({ wordSet }: WordSetDetailsPageProps) {
+export function WordSetDetailsPage({
+  wordSet,
+  backHref,
+  backLabel,
+}: WordSetDetailsPageProps) {
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -72,9 +78,9 @@ export function WordSetDetailsPage({ wordSet }: WordSetDetailsPageProps) {
           <div className="flex min-w-0 items-center gap-3">
             <MobileSidebar />
             <Button variant="ghost" size="icon-sm" asChild>
-              <Link href={`/teacher/classes/${wordSet.classId}`}>
+              <Link href={backHref}>
                 <ArrowLeft className="size-4" />
-                <span className="sr-only">Back to class</span>
+                <span className="sr-only">{backLabel}</span>
               </Link>
             </Button>
             <h1 className="truncate text-xl font-semibold">{wordSet.title}</h1>
