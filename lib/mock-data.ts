@@ -280,7 +280,14 @@ export const mockClassDetails: MockClassDetails[] = mockClasses.map(
       "Practical travel vocabulary for airports, hotels, food, and directions.",
     ][index],
     studentsList: defaultStudents.slice(0, Math.min(4, classItem.students)),
-    wordSetsList: defaultWordSets.slice(0, Math.min(3, classItem.wordSets)),
+    wordSetsList: defaultWordSets
+      .slice(0, Math.min(3, classItem.wordSets))
+      .map((wordSet) => ({
+        ...wordSet,
+        id: `${classItem.id}-${wordSet.id}`,
+        classId: classItem.id,
+        assignedStudents: classItem.students,
+      })),
     problemWords: defaultProblemWords,
   }),
 );
@@ -290,5 +297,25 @@ export function getMockClassDetails(id: string) {
 }
 
 export function getMockWordSetDetails(id: string) {
-  return mockWordSetDetails.find((wordSet) => wordSet.id === id);
+  const directMatch = mockWordSetDetails.find((wordSet) => wordSet.id === id);
+
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const [classId, wordSetId] = id.split("-");
+  const classDetails = getMockClassDetails(classId);
+  const template = mockWordSetDetails.find((wordSet) => wordSet.id === wordSetId);
+
+  if (!classDetails || !template) {
+    return undefined;
+  }
+
+  return {
+    ...template,
+    id,
+    classId,
+    className: classDetails.name,
+    assignedStudents: classDetails.students,
+  };
 }
