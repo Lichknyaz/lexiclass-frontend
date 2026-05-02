@@ -58,7 +58,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
           <div className="flex min-w-0 items-center gap-3">
             <MobileSidebar />
             <Button variant="ghost" size="icon-sm" asChild>
-              <Link href="/">
+              <Link href="/teacher/dashboard">
                 <ArrowLeft className="size-4" />
                 <span className="sr-only">Back to classes</span>
               </Link>
@@ -210,8 +210,9 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     {classDetails.wordSetsList.map((wordSet) => (
-                      <div
+                      <Link
                         key={wordSet.id}
+                        href={`/teacher/word-sets/${wordSet.id}`}
                         className="rounded-lg border p-4 transition-colors hover:bg-muted/40"
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -231,7 +232,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                           value={wordSet.averageProgress}
                           className="mt-2 h-2"
                         />
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 </CardContent>

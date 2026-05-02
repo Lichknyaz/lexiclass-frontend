@@ -18,11 +18,28 @@ export interface MockStudent {
 
 export interface MockWordSet {
   id: string;
+  classId: string;
   title: string;
   description: string;
   words: number;
   assignedStudents: number;
   averageProgress: number;
+}
+
+export interface MockWord {
+  id: string;
+  term: string;
+  translation: string;
+  exampleSentence: string;
+  masteryLevel: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+}
+
+export interface MockWordSetDetails extends MockWordSet {
+  className: string;
+  createdAt: string;
+  wordsList: MockWord[];
 }
 
 export interface MockProblemWord {
@@ -92,6 +109,7 @@ const defaultStudents: MockStudent[] = [
 const defaultWordSets: MockWordSet[] = [
   {
     id: "w1",
+    classId: "1",
     title: "Daily routines",
     description: "Common verbs and phrases for everyday activities.",
     words: 24,
@@ -100,6 +118,7 @@ const defaultWordSets: MockWordSet[] = [
   },
   {
     id: "w2",
+    classId: "1",
     title: "Food and restaurants",
     description: "Ordering, ingredients, and restaurant vocabulary.",
     words: 32,
@@ -108,11 +127,117 @@ const defaultWordSets: MockWordSet[] = [
   },
   {
     id: "w3",
+    classId: "1",
     title: "Past simple verbs",
     description: "Regular and irregular verbs for simple past stories.",
     words: 28,
     assignedStudents: 10,
     averageProgress: 58,
+  },
+];
+
+export const mockWordSetDetails: MockWordSetDetails[] = [
+  {
+    ...defaultWordSets[0],
+    className: "English A2",
+    createdAt: "April 24, 2026",
+    wordsList: [
+      {
+        id: "word-1",
+        term: "wake up",
+        translation: "get out of sleep",
+        exampleSentence: "I wake up at seven every morning.",
+        masteryLevel: 78,
+        correctAnswers: 42,
+        wrongAnswers: 9,
+      },
+      {
+        id: "word-2",
+        term: "commute",
+        translation: "travel to work or school",
+        exampleSentence: "She commutes by tram on weekdays.",
+        masteryLevel: 61,
+        correctAnswers: 31,
+        wrongAnswers: 16,
+      },
+      {
+        id: "word-3",
+        term: "borrow",
+        translation: "take and return later",
+        exampleSentence: "Can I borrow your dictionary for class?",
+        masteryLevel: 43,
+        correctAnswers: 24,
+        wrongAnswers: 23,
+      },
+      {
+        id: "word-4",
+        term: "tidy up",
+        translation: "make a place clean",
+        exampleSentence: "We tidy up the classroom after the lesson.",
+        masteryLevel: 72,
+        correctAnswers: 37,
+        wrongAnswers: 11,
+      },
+    ],
+  },
+  {
+    ...defaultWordSets[1],
+    className: "English A2",
+    createdAt: "April 26, 2026",
+    wordsList: [
+      {
+        id: "word-5",
+        term: "receipt",
+        translation: "proof of payment",
+        exampleSentence: "Keep the receipt after you pay.",
+        masteryLevel: 48,
+        correctAnswers: 28,
+        wrongAnswers: 19,
+      },
+      {
+        id: "word-6",
+        term: "starter",
+        translation: "small first course",
+        exampleSentence: "We ordered soup as a starter.",
+        masteryLevel: 66,
+        correctAnswers: 35,
+        wrongAnswers: 12,
+      },
+      {
+        id: "word-7",
+        term: "bill",
+        translation: "request for payment",
+        exampleSentence: "Could we have the bill, please?",
+        masteryLevel: 81,
+        correctAnswers: 49,
+        wrongAnswers: 8,
+      },
+    ],
+  },
+  {
+    ...defaultWordSets[2],
+    className: "English A2",
+    createdAt: "April 29, 2026",
+    wordsList: [
+      {
+        id: "word-8",
+        term: "bought",
+        translation: "past of buy",
+        exampleSentence: "He bought a notebook yesterday.",
+        masteryLevel: 59,
+        correctAnswers: 29,
+        wrongAnswers: 17,
+      },
+      {
+        id: "word-9",
+        term: "left",
+        translation: "past of leave",
+        exampleSentence: "They left the office at five.",
+        masteryLevel: 64,
+        correctAnswers: 33,
+        wrongAnswers: 14,
+      },
+    ],
   },
 ];
 
@@ -155,11 +280,42 @@ export const mockClassDetails: MockClassDetails[] = mockClasses.map(
       "Practical travel vocabulary for airports, hotels, food, and directions.",
     ][index],
     studentsList: defaultStudents.slice(0, Math.min(4, classItem.students)),
-    wordSetsList: defaultWordSets.slice(0, Math.min(3, classItem.wordSets)),
+    wordSetsList: defaultWordSets
+      .slice(0, Math.min(3, classItem.wordSets))
+      .map((wordSet) => ({
+        ...wordSet,
+        id: `${classItem.id}-${wordSet.id}`,
+        classId: classItem.id,
+        assignedStudents: classItem.students,
+      })),
     problemWords: defaultProblemWords,
   }),
 );
 
 export function getMockClassDetails(id: string) {
   return mockClassDetails.find((classItem) => classItem.id === id);
+}
+
+export function getMockWordSetDetails(id: string) {
+  const directMatch = mockWordSetDetails.find((wordSet) => wordSet.id === id);
+
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const [classId, wordSetId] = id.split("-");
+  const classDetails = getMockClassDetails(classId);
+  const template = mockWordSetDetails.find((wordSet) => wordSet.id === wordSetId);
+
+  if (!classDetails || !template) {
+    return undefined;
+  }
+
+  return {
+    ...template,
+    id,
+    classId,
+    className: classDetails.name,
+    assignedStudents: classDetails.students,
+  };
 }
