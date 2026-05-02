@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,16 +16,11 @@ import { Sidebar } from "./sidebar";
 import { MobileSidebar } from "./mobile-sidebar";
 import { ClassCard, type ClassData } from "./class-card";
 import { CreateClassDialog } from "./create-class-dialog";
-
-const initialClasses: ClassData[] = [
-  { id: "1", name: "English A2", students: 12, wordSets: 4, progress: 68 },
-  { id: "2", name: "English B1", students: 8, wordSets: 3, progress: 74 },
-  { id: "3", name: "Kids Group", students: 15, wordSets: 5, progress: 52 },
-  { id: "4", name: "Travel Vocabulary", students: 6, wordSets: 2, progress: 81 },
-];
+import { mockClasses } from "@/lib/mock-data";
 
 export function TeacherDashboard() {
-  const [classes, setClasses] = useState<ClassData[]>(initialClasses);
+  const router = useRouter();
+  const [classes, setClasses] = useState<ClassData[]>(mockClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleCreateClass = (className: string) => {
@@ -39,8 +35,7 @@ export function TeacherDashboard() {
   };
 
   const handleOpenClass = (classData: ClassData) => {
-    // Placeholder for navigation or modal
-    console.log("Opening class:", classData.name);
+    router.push(`/teacher/classes/${classData.id}`);
   };
 
   return (
