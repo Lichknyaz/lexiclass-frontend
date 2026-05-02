@@ -60,6 +60,36 @@ export interface MockClassDetails extends MockClassSummary {
   problemWords: MockProblemWord[];
 }
 
+export interface MockStudentClass {
+  id: string;
+  name: string;
+  teacherName: string;
+  level: string;
+  progress: number;
+  wordSets: MockStudentWordSet[];
+}
+
+export interface MockStudentWordSet {
+  id: string;
+  classId: string;
+  className: string;
+  title: string;
+  words: number;
+  completedWords: number;
+  progress: number;
+  dueLabel: string;
+}
+
+export interface MockStudentProgressWord {
+  id: string;
+  term: string;
+  translation: string;
+  masteryLevel: number;
+  correctCount: number;
+  wrongCount: number;
+  lastPracticedAt: string;
+}
+
 export const mockClasses: MockClassSummary[] = [
   { id: "1", name: "English A2", students: 12, wordSets: 4, progress: 68 },
   { id: "2", name: "English B1", students: 8, wordSets: 3, progress: 74 },
@@ -318,4 +348,93 @@ export function getMockWordSetDetails(id: string) {
     className: classDetails.name,
     assignedStudents: classDetails.students,
   };
+}
+
+export const mockStudentClasses: MockStudentClass[] = [
+  {
+    id: "1",
+    name: "English A2",
+    teacherName: "Ms. Carter",
+    level: "A2",
+    progress: 68,
+    wordSets: [
+      {
+        id: "1-w1",
+        classId: "1",
+        className: "English A2",
+        title: "Daily routines",
+        words: 24,
+        completedWords: 18,
+        progress: 75,
+        dueLabel: "Practice today",
+      },
+      {
+        id: "1-w2",
+        classId: "1",
+        className: "English A2",
+        title: "Food and restaurants",
+        words: 32,
+        completedWords: 17,
+        progress: 53,
+        dueLabel: "Due tomorrow",
+      },
+    ],
+  },
+  {
+    id: "4",
+    name: "Travel Vocabulary",
+    teacherName: "Mr. Novak",
+    level: "A2-B1",
+    progress: 81,
+    wordSets: [
+      {
+        id: "4-w1",
+        classId: "4",
+        className: "Travel Vocabulary",
+        title: "Airport basics",
+        words: 20,
+        completedWords: 16,
+        progress: 80,
+        dueLabel: "Ready to review",
+      },
+    ],
+  },
+];
+
+export const mockStudentProgressWords: MockStudentProgressWord[] = [
+  {
+    id: "sp1",
+    term: "borrow",
+    translation: "take and return later",
+    masteryLevel: 42,
+    correctCount: 5,
+    wrongCount: 8,
+    lastPracticedAt: "Today",
+  },
+  {
+    id: "sp2",
+    term: "receipt",
+    translation: "proof of payment",
+    masteryLevel: 55,
+    correctCount: 7,
+    wrongCount: 6,
+    lastPracticedAt: "Yesterday",
+  },
+  {
+    id: "sp3",
+    term: "wake up",
+    translation: "get out of sleep",
+    masteryLevel: 86,
+    correctCount: 14,
+    wrongCount: 2,
+    lastPracticedAt: "Today",
+  },
+];
+
+export function getMockStudentWordSets() {
+  return mockStudentClasses.flatMap((classItem) => classItem.wordSets);
+}
+
+export function getMockStudentWordSet(id: string) {
+  return getMockStudentWordSets().find((wordSet) => wordSet.id === id);
 }
