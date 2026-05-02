@@ -57,13 +57,9 @@ export function TeacherDashboard() {
             <MobileSidebar />
             <h1 className="text-xl font-semibold">Dashboard</h1>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus className="size-4" />
-            Create Class
-          </Button>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-auto p-4">
           <div className="flex flex-col gap-4">
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatsCard
@@ -88,28 +84,46 @@ export function TeacherDashboard() {
               />
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <Card>
-                <CardHeader>
+            <section className="grid gap-4 xl:grid-cols-12">
+              <Card className="xl:col-span-4">
+                <CardHeader className="pb-2">
                   <CardTitle>Problem Words</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
-                  {problemWords.map((word) => (
-                    <ProblemWordRow key={word.id} word={word} />
-                  ))}
+                <CardContent className="px-4 pb-4">
+                  <div className="max-h-[260px] overflow-y-auto rounded-lg border">
+                    <div className="divide-y">
+                      {problemWords.slice(0, 3).map((word) => (
+                        <ProblemWordRow key={word.id} word={word} />
+                      ))}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
+              <div className="xl:col-span-3">
+                <StudentsPreview
+                  title="Top Performing Students"
+                  students={topStudents}
+                />
+              </div>
+              <div className="xl:col-span-3">
+                <StudentsPreview
+                  title="Lowest Progress"
+                  students={lowestStudents}
+                />
+              </div>
+
+              <Card className="h-fit self-start xl:col-span-2">
+                <CardHeader className="pb-2">
                   <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
-                <CardContent className="grid gap-2">
-                  <Button onClick={() => setDialogOpen(true)}>
+                <CardContent className="grid gap-1.5 px-3 pb-3">
+                  <Button size="sm" onClick={() => setDialogOpen(true)}>
                     <Plus className="size-4" />
                     Create Class
                   </Button>
                   <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => router.push("/teacher/word-sets")}
                   >
@@ -117,6 +131,7 @@ export function TeacherDashboard() {
                     Create Word Set
                   </Button>
                   <Button
+                    size="sm"
                     variant="outline"
                     onClick={() => router.push("/teacher/word-sets")}
                   >
@@ -125,11 +140,6 @@ export function TeacherDashboard() {
                   </Button>
                 </CardContent>
               </Card>
-            </section>
-
-            <section className="grid gap-4 lg:grid-cols-2">
-              <StudentsPreview title="Top Performing Students" students={topStudents} />
-              <StudentsPreview title="Lowest Progress" students={lowestStudents} />
             </section>
           </div>
         </main>
@@ -167,26 +177,34 @@ function StatsCard({ icon: Icon, label, value }: StatsCardProps) {
 function ProblemWordRow({ word }: { word: MockProblemWord }) {
   const totalAnswers = word.correctAnswers + word.wrongAnswers;
   const mistakeRate =
-    totalAnswers === 0 ? 0 : Math.round((word.wrongAnswers / totalAnswers) * 100);
+    totalAnswers === 0
+      ? 0
+      : Math.round((word.wrongAnswers / totalAnswers) * 100);
 
   return (
-    <div className="rounded-lg border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="px-4 py-2">
+      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+        <div className="min-w-0">
           <div className="font-medium">{word.term}</div>
-          <div className="text-sm text-muted-foreground">{word.translation}</div>
+          <div className="text-sm text-muted-foreground">
+            {word.translation}
+          </div>
         </div>
-        <Badge variant="outline" className="border-destructive/30 text-destructive">
-          {mistakeRate}% mistakes
-        </Badge>
-      </div>
-      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-        <span>{word.affectedStudents} students affected</span>
-        <span>{word.wrongAnswers} wrong</span>
+        <div>
+          <Badge
+            variant="outline"
+            className="border-destructive/30 text-destructive"
+          >
+            {mistakeRate}% mistakes
+          </Badge>
+        </div>
+        <div className="text-sm text-muted-foreground md:text-right">
+          {word.affectedStudents} students / {word.wrongAnswers} wrong
+        </div>
       </div>
       <Progress
         value={mistakeRate}
-        className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+        className="mt-1.5 h-1.5 [&_[data-slot=progress-indicator]]:bg-destructive"
       />
     </div>
   );
@@ -205,39 +223,46 @@ function StudentsPreview({
 }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-2">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {students.map((student) => (
-          <div key={`${student.className}-${student.id}`} className="rounded-lg border p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-medium">{student.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {student.className}
-                </div>
-              </div>
-              <span
-                className={
-                  student.progress < 60
-                    ? "text-sm font-medium text-destructive"
-                    : "text-sm font-medium"
-                }
+      <CardContent className="px-4 pb-4">
+        <div className="max-h-[220px] overflow-y-auto rounded-lg border">
+          <div className="divide-y">
+            {students.map((student) => (
+              <div
+                key={`${student.className}-${student.id}`}
+                className="px-4 py-2"
               >
-                {student.progress}%
-              </span>
-            </div>
-            <Progress
-              value={student.progress}
-              className={
-                student.progress < 60
-                  ? "mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
-                  : "mt-3 h-2"
-              }
-            />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium">{student.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {student.className}
+                    </div>
+                  </div>
+                  <span
+                    className={
+                      student.progress < 60
+                        ? "text-sm font-medium text-destructive"
+                        : "text-sm font-medium"
+                    }
+                  >
+                    {student.progress}%
+                  </span>
+                </div>
+                <Progress
+                  value={student.progress}
+                  className={
+                    student.progress < 60
+                      ? "mt-1.5 h-1.5 [&_[data-slot=progress-indicator]]:bg-destructive"
+                      : "mt-1.5 h-1.5"
+                  }
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </CardContent>
     </Card>
   );
