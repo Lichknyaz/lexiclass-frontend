@@ -303,13 +303,21 @@ function ProblemWordsCard({
                       {word.translation}
                     </div>
                   </div>
-                  <Badge variant="outline">{wrongRate}% wrong</Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-destructive/30 text-destructive"
+                  >
+                    {wrongRate}% wrong
+                  </Badge>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                   <span>{word.affectedStudents} students affected</span>
                   <span>{word.wrongAnswers} wrong answers</span>
                 </div>
-                <Progress value={wrongRate} className="mt-2 h-2" />
+                <Progress
+                  value={wrongRate}
+                  className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+                />
               </div>
             );
           })}
