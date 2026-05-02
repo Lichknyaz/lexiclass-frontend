@@ -1,55 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, BookOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-  Empty,
-  EmptyHeader,
-  EmptyTitle,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyContent,
-} from "@/components/ui/empty";
-import { Sidebar } from "./sidebar";
-import { MobileSidebar } from "./mobile-sidebar";
-import { ClassCard, type ClassData } from "./class-card";
-import { CreateClassDialog } from "./create-class-dialog";
-import { mockClasses } from "@/lib/mock-data";
+  BarChart3,
+  BookOpen,
+  ListChecks,
+  Plus,
+  TrendingDown,
+  UserRoundCheck,
+  Users,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { CreateClassDialog } from "@/components/dashboard/create-class-dialog";
+import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
+import { Sidebar } from "@/components/dashboard/sidebar";
+import {
+  mockClassDetails,
+  mockClasses,
+  mockWordSetSummaries,
+  type MockProblemWord,
+  type MockStudent,
+} from "@/lib/mock-data";
 
 export function TeacherDashboard() {
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassData[]>(mockClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleCreateClass = (className: string) => {
-    const newClass: ClassData = {
-      id: Date.now().toString(),
-      name: className,
-      students: 0,
-      wordSets: 0,
-      progress: 0,
-    };
-    setClasses((prev) => [...prev, newClass]);
-  };
-
-  const handleOpenClass = (classData: ClassData) => {
-    router.push(`/teacher/classes/${classData.id}`);
-  };
+  const totalStudents = mockClasses.reduce(
+    (total, classItem) => total + classItem.students,
+    0,
+  );
+  const averageProgress = Math.round(
+    mockClasses.reduce((total, classItem) => total + classItem.progress, 0) /
+      mockClasses.length,
+  );
+  const problemWords = useMemo(() => getTopProblemWords(), []);
+  const students = useMemo(() => getStudentPreviewData(), []);
+  const topStudents = [...students]
+    .sort((a, b) => b.progress - a.progress)
+    .slice(0, 3);
+  const lowestStudents = [...students]
+    .sort((a, b) => a.progress - b.progress)
+    .slice(0, 3);
 
   return (
     <div className="flex h-screen">
-      {/* Desktop Sidebar */}
       <Sidebar className="hidden lg:flex" />
 
-      {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <MobileSidebar />
-            <h1 className="text-xl font-semibold">My Classes</h1>
+            <h1 className="text-xl font-semibold">Dashboard</h1>
           </div>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="size-4" />
@@ -57,47 +63,219 @@ export function TeacherDashboard() {
           </Button>
         </header>
 
-        {/* Content */}
         <main className="flex-1 overflow-auto p-4 lg:p-6">
-          {classes.length === 0 ? (
-            <Empty className="h-full border">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <BookOpen />
-                </EmptyMedia>
-                <EmptyTitle>No classes yet</EmptyTitle>
-                <EmptyDescription>
-                  Create your first class to start teaching vocabulary to your
-                  students.
-                </EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="size-4" />
-                  Create Your First Class
-                </Button>
-              </EmptyContent>
-            </Empty>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {classes.map((classItem) => (
-                <ClassCard
-                  key={classItem.id}
-                  classData={classItem}
-                  onOpen={handleOpenClass}
-                />
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col gap-4">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatsCard
+                icon={BookOpen}
+                label="Total classes"
+                value={mockClasses.length}
+              />
+              <StatsCard
+                icon={Users}
+                label="Total students"
+                value={totalStudents}
+              />
+              <StatsCard
+                icon={ListChecks}
+                label="Total word sets"
+                value={mockWordSetSummaries.length}
+              />
+              <StatsCard
+                icon={BarChart3}
+                label="Average progress"
+                value={`${averageProgress}%`}
+              />
+            </section>
+
+            <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Problem Words</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+                  {problemWords.map((word) => (
+                    <ProblemWordRow key={word.id} word={word} />
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2">
+                  <Button onClick={() => setDialogOpen(true)}>
+                    <Plus className="size-4" />
+                    Create Class
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/teacher/word-sets")}
+                  >
+                    <ListChecks className="size-4" />
+                    Create Word Set
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/teacher/word-sets")}
+                  >
+                    <UserRoundCheck className="size-4" />
+                    Assign Word Set
+                  </Button>
+                </CardContent>
+              </Card>
+            </section>
+
+            <section className="grid gap-4 lg:grid-cols-2">
+              <StudentsPreview title="Top Performing Students" students={topStudents} />
+              <StudentsPreview title="Lowest Progress" students={lowestStudents} />
+            </section>
+          </div>
         </main>
       </div>
 
-      {/* Create Class Dialog */}
       <CreateClassDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCreate={handleCreateClass}
+        onCreate={() => setDialogOpen(false)}
       />
     </div>
+  );
+}
+
+interface StatsCardProps {
+  icon: typeof BookOpen;
+  label: string;
+  value: number | string;
+}
+
+function StatsCard({ icon: Icon, label, value }: StatsCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Icon className="size-4" />
+          {label}
+        </div>
+        <div className="mt-2 text-2xl font-semibold">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProblemWordRow({ word }: { word: MockProblemWord }) {
+  const totalAnswers = word.correctAnswers + word.wrongAnswers;
+  const mistakeRate =
+    totalAnswers === 0 ? 0 : Math.round((word.wrongAnswers / totalAnswers) * 100);
+
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="font-medium">{word.term}</div>
+          <div className="text-sm text-muted-foreground">{word.translation}</div>
+        </div>
+        <Badge variant="outline" className="border-destructive/30 text-destructive">
+          {mistakeRate}% mistakes
+        </Badge>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+        <span>{word.affectedStudents} students affected</span>
+        <span>{word.wrongAnswers} wrong</span>
+      </div>
+      <Progress
+        value={mistakeRate}
+        className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+      />
+    </div>
+  );
+}
+
+interface StudentPreview extends MockStudent {
+  className: string;
+}
+
+function StudentsPreview({
+  title,
+  students,
+}: {
+  title: string;
+  students: StudentPreview[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        {students.map((student) => (
+          <div key={`${student.className}-${student.id}`} className="rounded-lg border p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-medium">{student.name}</div>
+                <div className="text-sm text-muted-foreground">
+                  {student.className}
+                </div>
+              </div>
+              <span
+                className={
+                  student.progress < 60
+                    ? "text-sm font-medium text-destructive"
+                    : "text-sm font-medium"
+                }
+              >
+                {student.progress}%
+              </span>
+            </div>
+            <Progress
+              value={student.progress}
+              className={
+                student.progress < 60
+                  ? "mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+                  : "mt-3 h-2"
+              }
+            />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function getTopProblemWords() {
+  const wordsByTerm = new Map<string, MockProblemWord>();
+
+  for (const classItem of mockClassDetails) {
+    for (const word of classItem.problemWords) {
+      const existing = wordsByTerm.get(word.term);
+
+      if (!existing) {
+        wordsByTerm.set(word.term, { ...word });
+        continue;
+      }
+
+      existing.correctAnswers += word.correctAnswers;
+      existing.wrongAnswers += word.wrongAnswers;
+      existing.affectedStudents += word.affectedStudents;
+    }
+  }
+
+  return [...wordsByTerm.values()]
+    .sort((a, b) => {
+      const aRate = a.wrongAnswers / (a.correctAnswers + a.wrongAnswers);
+      const bRate = b.wrongAnswers / (b.correctAnswers + b.wrongAnswers);
+
+      return bRate - aRate;
+    })
+    .slice(0, 5);
+}
+
+function getStudentPreviewData(): StudentPreview[] {
+  return mockClassDetails.flatMap((classItem) =>
+    classItem.studentsList.map((student) => ({
+      ...student,
+      className: classItem.name,
+    })),
   );
 }

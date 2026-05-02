@@ -1,5 +1,1 @@
-import { redirect } from "next/navigation";
-
-export default function Page() {
-  redirect("/teacher/dashboard");
-}
+import { redirect } from "next/navigation";  export default function Page() {   redirect("/teacher/dashboard"); }
