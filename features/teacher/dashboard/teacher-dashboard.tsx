@@ -58,7 +58,7 @@ export function TeacherDashboard() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-4">
+        <main className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="flex flex-col gap-4">
             <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatsCard
@@ -84,12 +84,12 @@ export function TeacherDashboard() {
             </section>
 
             <section className="grid gap-4 xl:grid-cols-12">
-              <Card className="xl:col-span-4">
+              <Card className="h-full xl:col-span-4">
                 <CardHeader className="pb-2">
                   <CardTitle>Problem Words</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
-                  <div className="max-h-[260px] overflow-y-auto rounded-lg border">
+                  <div className="max-h-[360px] overflow-y-auto rounded-lg border">
                     <div className="divide-y">
                       {problemWords.slice(0, 3).map((word) => (
                         <ProblemWordRow key={word.id} word={word} />
@@ -99,13 +99,13 @@ export function TeacherDashboard() {
                 </CardContent>
               </Card>
 
-              <div className="xl:col-span-4">
+              <div className="h-full xl:col-span-4">
                 <StudentsPreview
                   title="Top Performing Students"
                   students={topStudents}
                 />
               </div>
-              <div className="xl:col-span-4">
+              <div className="h-full xl:col-span-4">
                 <StudentsPreview
                   title="Lowest Progress"
                   students={lowestStudents}
@@ -150,23 +150,23 @@ function ProblemWordRow({ word }: { word: MockProblemWord }) {
 
   return (
     <div className="px-4 py-2">
-      <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
+      <div className="grid gap-2">
         <div className="min-w-0">
-          <div className="font-medium">{word.term}</div>
-          <div className="text-sm text-muted-foreground">
+          <div className="truncate font-medium">{word.term}</div>
+          <div className="line-clamp-2 break-words text-sm text-muted-foreground">
             {word.translation}
           </div>
         </div>
-        <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Badge
             variant="outline"
-            className="border-destructive/30 text-destructive"
+            className="shrink-0 border-destructive/30 text-destructive"
           >
             {mistakeRate}% mistakes
           </Badge>
-        </div>
-        <div className="text-sm text-muted-foreground md:text-right">
-          {word.affectedStudents} students / {word.wrongAnswers} wrong
+          <span className="text-sm text-muted-foreground">
+            {word.affectedStudents} students / {word.wrongAnswers} wrong
+          </span>
         </div>
       </div>
       <Progress
@@ -189,12 +189,12 @@ function StudentsPreview({
   students: StudentPreview[];
 }) {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-2">
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-4">
-        <div className="max-h-[220px] overflow-y-auto rounded-lg border">
+        <div className="max-h-[260px] overflow-y-auto rounded-lg border">
           <div className="divide-y">
             {students.map((student) => (
               <div
