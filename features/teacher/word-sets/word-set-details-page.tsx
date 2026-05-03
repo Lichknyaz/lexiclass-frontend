@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ListChecks, Plus, Target } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  ListChecks,
+  Plus,
+  Target,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +35,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import type { MockWord, MockWordSetDetails } from "@/types/mock";
+import { mockClasses } from "@/mock/mock-data";
+import type { MockClassSummary, MockWord, MockWordSetDetails } from "@/types/mock";
 import { getAverage } from "@/utils";
 
 interface WordSetDetailsPageProps {
@@ -42,12 +50,28 @@ export function WordSetDetailsPage({
   backHref,
   backLabel,
 }: WordSetDetailsPageProps) {
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [addWordDialogOpen, setAddWordDialogOpen] = useState(false);
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [assignedClasses, setAssignedClasses] = useState<MockClassSummary[]>(
+    mockClasses.filter((classItem) => classItem.id === wordSet.classId),
+  );
 
   const averageMastery = getAverage(words.map((word) => word.masteryLevel));
+  const problemWordsCount = words.filter(
+    (word) => word.masteryLevel < 60,
+  ).length;
+  const availableClasses = mockClasses.filter(
+    (classItem) =>
+      !assignedClasses.some(
+        (assignedClass) => assignedClass.id === classItem.id,
+      ),
+  );
 
-  const problemWordsCount = words.filter((word) => word.masteryLevel < 60).length;
+  const handleAssignClass = (classItem: MockClassSummary) => {
+    setAssignedClasses((currentClasses) => [...currentClasses, classItem]);
+    setAssignDialogOpen(false);
+  };
 
   const handleAddWord = (word: NewWordInput) => {
     setWords((currentWords) => [
@@ -80,9 +104,9 @@ export function WordSetDetailsPage({
             </Button>
             <h1 className="truncate text-xl font-semibold">{wordSet.title}</h1>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setAssignDialogOpen(true)}>
             <Plus className="size-4" />
-            Add Word
+            Assign to Class
           </Button>
         </header>
 
@@ -111,8 +135,8 @@ export function WordSetDetailsPage({
                   />
                   <SummaryMetric
                     icon={ListChecks}
-                    label="Assigned"
-                    value={wordSet.assignedStudents}
+                    label="Assigned classes"
+                    value={assignedClasses.length}
                   />
                   <SummaryMetric
                     icon={Target}
@@ -151,7 +175,7 @@ export function WordSetDetailsPage({
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-3">
                 <CardTitle>Words</CardTitle>
-                <Button size="sm" onClick={() => setDialogOpen(true)}>
+                <Button size="sm" onClick={() => setAddWordDialogOpen(true)}>
                   <Plus className="size-4" />
                   Add Word
                 </Button>
@@ -209,9 +233,16 @@ export function WordSetDetailsPage({
         </main>
       </div>
 
+      <AssignClassDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        availableClasses={availableClasses}
+        assignedClasses={assignedClasses}
+        onAssign={handleAssignClass}
+      />
       <AddWordDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={addWordDialogOpen}
+        onOpenChange={setAddWordDialogOpen}
         onAddWord={handleAddWord}
       />
     </div>
@@ -240,6 +271,79 @@ interface NewWordInput {
   term: string;
   translation: string;
   exampleSentence: string;
+}
+
+interface AssignClassDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  availableClasses: MockClassSummary[];
+  assignedClasses: MockClassSummary[];
+  onAssign: (classItem: MockClassSummary) => void;
+}
+
+function AssignClassDialog({
+  open,
+  onOpenChange,
+  availableClasses,
+  assignedClasses,
+  onAssign,
+}: AssignClassDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Assign Word Set to Class</DialogTitle>
+          <DialogDescription>
+            Choose a class that should practice this word set.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          <div className="rounded-lg border bg-muted/40 p-4">
+            <div className="text-sm font-medium">Assigned classes</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {assignedClasses.map((classItem) => (
+                <Badge key={classItem.id} variant="secondary">
+                  {classItem.name}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {availableClasses.length === 0 ? (
+            <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+              This word set is already assigned to every class.
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              {availableClasses.map((classItem) => (
+                <div
+                  key={classItem.id}
+                  className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium">{classItem.name}</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Users className="size-4" />
+                        {classItem.students} students
+                      </span>
+                      <span>{classItem.wordSets} word sets</span>
+                      <span>{classItem.progress}% progress</span>
+                    </div>
+                  </div>
+                  <Button onClick={() => onAssign(classItem)}>
+                    <Plus className="size-4" />
+                    Assign
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 interface AddWordDialogProps {
