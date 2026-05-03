@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -28,6 +28,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,8 @@ export function WordSetDetailsPage({
     useState<MockWord | null>(null);
   const [deleteWordDialogWord, setDeleteWordDialogWord] =
     useState<MockWord | null>(null);
+  const [wordFilter, setWordFilter] = useState<WordFilter>("all");
+  const [selectedWordIds, setSelectedWordIds] = useState<string[]>([]);
   const [wordSetOverview, setWordSetOverview] = useState({
     title: wordSet.title,
     description: wordSet.description,
@@ -101,6 +104,17 @@ export function WordSetDetailsPage({
   const problemWordsCount = words.filter(
     (word) => word.masteryLevel < 60,
   ).length;
+  const filteredWords = useMemo(
+    () => words.filter((word) => matchesWordFilter(word, wordFilter)),
+    [wordFilter, words],
+  );
+  const filteredWordIds = filteredWords.map((word) => word.id);
+  const selectedFilteredWordIds = selectedWordIds.filter((wordId) =>
+    filteredWordIds.includes(wordId),
+  );
+  const allFilteredWordsSelected =
+    filteredWordIds.length > 0 &&
+    filteredWordIds.every((wordId) => selectedWordIds.includes(wordId));
   const availableClasses = mockClasses.filter(
     (classItem) =>
       !assignedClasses.some(
@@ -113,18 +127,18 @@ export function WordSetDetailsPage({
     setAssignDialogOpen(false);
   };
 
-  const handleAddWord = (word: NewWordInput) => {
+  const handleAddWords = (newWords: NewWordInput[]) => {
     setWords((currentWords) => [
       ...currentWords,
-      {
-        id: Date.now().toString(),
+      ...newWords.map((word, index) => ({
+        id: `${Date.now()}-${index}`,
         term: word.term,
         translation: word.translation,
         exampleSentence: word.exampleSentence,
         masteryLevel: 0,
         correctAnswers: 0,
         wrongAnswers: 0,
-      },
+      })),
     ]);
   };
 
@@ -152,7 +166,35 @@ export function WordSetDetailsPage({
     setWords((currentWords) =>
       currentWords.filter((word) => word.id !== deleteWordDialogWord.id),
     );
+    setSelectedWordIds((currentIds) =>
+      currentIds.filter((wordId) => wordId !== deleteWordDialogWord.id),
+    );
     setDeleteWordDialogWord(null);
+  };
+
+  const handleToggleWord = (wordId: string, checked: boolean) => {
+    setSelectedWordIds((currentIds) =>
+      checked
+        ? [...new Set([...currentIds, wordId])]
+        : currentIds.filter((currentId) => currentId !== wordId),
+    );
+  };
+
+  const handleToggleAllFilteredWords = (checked: boolean) => {
+    setSelectedWordIds((currentIds) => {
+      if (!checked) {
+        return currentIds.filter((wordId) => !filteredWordIds.includes(wordId));
+      }
+
+      return [...new Set([...currentIds, ...filteredWordIds])];
+    });
+  };
+
+  const handleDeleteSelectedWords = () => {
+    setWords((currentWords) =>
+      currentWords.filter((word) => !selectedWordIds.includes(word.id)),
+    );
+    setSelectedWordIds([]);
   };
 
   const handleUpdateWordSetOverview = (overview: WordSetOverviewInput) => {
@@ -279,9 +321,56 @@ export function WordSetDetailsPage({
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="mb-4 flex flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {wordFilterOptions.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        size="sm"
+                        variant={
+                          wordFilter === option.value ? "default" : "outline"
+                        }
+                        onClick={() => setWordFilter(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  {selectedWordIds.length > 0 && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedWordIds.length} selected
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleDeleteSelectedWords}
+                      >
+                        <Trash2 className="size-4" />
+                        Delete selected
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox
+                          checked={
+                            allFilteredWordsSelected
+                              ? true
+                              : selectedFilteredWordIds.length > 0
+                                ? "indeterminate"
+                                : false
+                          }
+                          onCheckedChange={(checked) =>
+                            handleToggleAllFilteredWords(checked === true)
+                          }
+                          aria-label="Select all words"
+                        />
+                      </TableHead>
                       <TableHead>Term</TableHead>
                       <TableHead>Translation</TableHead>
                       <TableHead>Example</TableHead>
@@ -293,8 +382,17 @@ export function WordSetDetailsPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {words.map((word) => (
+                    {filteredWords.map((word) => (
                       <TableRow key={word.id}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedWordIds.includes(word.id)}
+                            onCheckedChange={(checked) =>
+                              handleToggleWord(word.id, checked === true)
+                            }
+                            aria-label={`Select ${word.term}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {word.term}
                         </TableCell>
@@ -352,7 +450,7 @@ export function WordSetDetailsPage({
       <AddWordDialog
         open={addWordDialogOpen}
         onOpenChange={setAddWordDialogOpen}
-        onAddWord={handleAddWord}
+        onAddWords={handleAddWords}
       />
       <ViewWordDialog
         word={viewWordDialogWord}
@@ -469,6 +567,45 @@ interface NewWordInput {
   exampleSentence: string;
 }
 
+type WordFilter = "all" | "weak" | "unlearned";
+
+const wordFilterOptions: Array<{ label: string; value: WordFilter }> = [
+  { label: "All", value: "all" },
+  { label: "Weak (<50%)", value: "weak" },
+  { label: "Unlearned", value: "unlearned" },
+];
+
+function matchesWordFilter(word: MockWord, filter: WordFilter) {
+  if (filter === "weak") {
+    return word.masteryLevel < 50;
+  }
+
+  if (filter === "unlearned") {
+    return word.masteryLevel === 0;
+  }
+
+  return true;
+}
+
+function parseBulkWordInput(input: string): NewWordInput[] {
+  return input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [term = "", translation = "", ...exampleParts] = line
+        .split(",")
+        .map((part) => part.trim());
+
+      return {
+        term,
+        translation,
+        exampleSentence: exampleParts.join(", ").trim(),
+      };
+    })
+    .filter((word) => word.term && word.translation);
+}
+
 interface WordInput extends NewWordInput {
   id: string;
 }
@@ -555,30 +692,48 @@ function AssignClassDialog({
 interface AddWordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddWord: (word: NewWordInput) => void;
+  onAddWords: (words: NewWordInput[]) => void;
 }
 
 function AddWordDialog({
   open,
   onOpenChange,
-  onAddWord,
+  onAddWords,
 }: AddWordDialogProps) {
   const [term, setTerm] = useState("");
   const [translation, setTranslation] = useState("");
   const [exampleSentence, setExampleSentence] = useState("");
+  const [bulkInput, setBulkInput] = useState("");
+
+  const parsedBulkWords = useMemo(
+    () => parseBulkWordInput(bulkInput),
+    [bulkInput],
+  );
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+
+    if (parsedBulkWords.length > 0) {
+      onAddWords(parsedBulkWords);
+      setBulkInput("");
+      setTerm("");
+      setTranslation("");
+      setExampleSentence("");
+      onOpenChange(false);
+      return;
+    }
 
     if (!term.trim() || !translation.trim()) {
       return;
     }
 
-    onAddWord({
-      term: term.trim(),
-      translation: translation.trim(),
-      exampleSentence: exampleSentence.trim(),
-    });
+    onAddWords([
+      {
+        term: term.trim(),
+        translation: translation.trim(),
+        exampleSentence: exampleSentence.trim(),
+      },
+    ]);
     setTerm("");
     setTranslation("");
     setExampleSentence("");
@@ -592,7 +747,7 @@ function AddWordDialog({
           <DialogHeader>
             <DialogTitle>Add Word</DialogTitle>
             <DialogDescription>
-              Add a term, translation, and optional example sentence.
+              Add one word manually or paste multiple rows.
             </DialogDescription>
           </DialogHeader>
 
@@ -625,6 +780,43 @@ function AddWordDialog({
                 placeholder="Use the word in a short sentence."
               />
             </Field>
+
+            <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
+              <div className="h-px flex-1 bg-border" />
+              bulk input
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="bulk-words">
+                Paste words: term, translation, example
+              </FieldLabel>
+              <Textarea
+                id="bulk-words"
+                value={bulkInput}
+                onChange={(event) => setBulkInput(event.target.value)}
+                placeholder={"borrow, take and return later, Can I borrow your pen?\nreceipt, proof of payment, Keep the receipt."}
+              />
+            </Field>
+
+            {parsedBulkWords.length > 0 && (
+              <div className="rounded-lg border bg-muted/40 p-3">
+                <div className="text-sm font-medium">
+                  Parsed preview ({parsedBulkWords.length})
+                </div>
+                <div className="mt-2 max-h-32 space-y-2 overflow-y-auto text-sm">
+                  {parsedBulkWords.map((word, index) => (
+                    <div key={`${word.term}-${index}`} className="min-w-0">
+                      <span className="font-medium">{word.term}</span>
+                      <span className="text-muted-foreground">
+                        {" "}
+                        - {word.translation}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -635,7 +827,13 @@ function AddWordDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!term.trim() || !translation.trim()}>
+            <Button
+              type="submit"
+              disabled={
+                parsedBulkWords.length === 0 &&
+                (!term.trim() || !translation.trim())
+              }
+            >
               Add Word
             </Button>
           </DialogFooter>

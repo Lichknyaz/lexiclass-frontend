@@ -1,8 +1,17 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart3, BookOpen, TrendingDown, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,21 +23,38 @@ import {
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { mockClassDetails } from "@/mock/mock-data";
+import type { MockProblemWord } from "@/types/mock";
 import { getAverage, getMistakeRate } from "@/utils";
 
 export function TeacherAnalyticsPage() {
-  const totalStudents = mockClassDetails.reduce(
+  const router = useRouter();
+  const [selectedClassId, setSelectedClassId] = useState("all");
+
+  const filteredClasses = useMemo(
+    () =>
+      selectedClassId === "all"
+        ? mockClassDetails
+        : mockClassDetails.filter(
+            (classItem) => classItem.id === selectedClassId,
+          ),
+    [selectedClassId],
+  );
+  const problemWords = useMemo(
+    () => getProblemWordsForClasses(filteredClasses),
+    [filteredClasses],
+  );
+
+  const totalStudents = filteredClasses.reduce(
     (total, classItem) => total + classItem.students,
     0,
   );
-  const totalWordSets = mockClassDetails.reduce(
+  const totalWordSets = filteredClasses.reduce(
     (total, classItem) => total + classItem.wordSets,
     0,
   );
   const averageProgress = getAverage(
-    mockClassDetails.map((classItem) => classItem.progress),
+    filteredClasses.map((classItem) => classItem.progress),
   );
-  const problemWords = mockClassDetails[0]?.problemWords ?? [];
 
   return (
     <div className="flex h-screen">
@@ -39,6 +65,21 @@ export function TeacherAnalyticsPage() {
           <div className="flex items-center gap-3">
             <MobileSidebar />
             <h1 className="text-xl font-semibold">Analytics</h1>
+          </div>
+          <div className="flex justify-end">
+            <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+              <SelectTrigger className="w-56">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Classes</SelectItem>
+                {mockClassDetails.map((classItem) => (
+                  <SelectItem key={classItem.id} value={classItem.id}>
+                    {classItem.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </header>
 
@@ -67,7 +108,7 @@ export function TeacherAnalyticsPage() {
               />
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <section>
               <Card>
                 <CardHeader>
                   <CardTitle>Class Progress</CardTitle>
@@ -83,8 +124,14 @@ export function TeacherAnalyticsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {mockClassDetails.map((classItem) => (
-                        <TableRow key={classItem.id}>
+                      {filteredClasses.map((classItem) => (
+                        <TableRow
+                          key={classItem.id}
+                          className="cursor-pointer"
+                          onClick={() =>
+                            router.push(`/teacher/classes/${classItem.id}`)
+                          }
+                        >
                           <TableCell className="font-medium">
                             {classItem.name}
                           </TableCell>
@@ -107,35 +154,39 @@ export function TeacherAnalyticsPage() {
                   </Table>
                 </CardContent>
               </Card>
+            </section>
 
+            <section>
               <Card>
                 <CardHeader>
-                  <CardTitle>Top Problem Words</CardTitle>
+                  <CardTitle>Problem Words</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-3">
-                  {problemWords.map((word) => {
-                    const wrongRate = getMistakeRate(word);
+                <CardContent>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {problemWords.map((word) => {
+                      const wrongRate = getMistakeRate(word);
 
-                    return (
-                      <div key={word.id} className="rounded-lg border p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="font-medium">{word.term}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {word.translation}
+                      return (
+                        <div key={word.id} className="rounded-lg border p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="font-medium">{word.term}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {word.className}
+                              </div>
                             </div>
+                            <span className="shrink-0 text-sm font-medium text-destructive">
+                              {wrongRate}% wrong
+                            </span>
                           </div>
-                          <span className="text-sm font-medium text-destructive">
-                            {wrongRate}% wrong
-                          </span>
+                          <Progress
+                            value={wrongRate}
+                            className="mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+                          />
                         </div>
-                        <Progress
-                          value={wrongRate}
-                          className="mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
-                        />
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </CardContent>
               </Card>
             </section>
@@ -143,6 +194,22 @@ export function TeacherAnalyticsPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+interface AnalyticsProblemWord extends MockProblemWord {
+  className: string;
+}
+
+function getProblemWordsForClasses(
+  classes: typeof mockClassDetails,
+): AnalyticsProblemWord[] {
+  return classes.flatMap((classItem) =>
+    classItem.problemWords.map((word) => ({
+      ...word,
+      id: `${classItem.id}-${word.id}`,
+      className: classItem.name,
+    })),
   );
 }
 
