@@ -18,11 +18,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
+import { getMockWordSetDetails } from "@/mock/mock-data";
 import {
-  getMockWordSetDetails,
   type MockStudentWordSet,
   type MockWord,
-} from "@/lib/mock-data";
+} from "@/types/mock";
 import { cn } from "@/lib/utils";
 
 type PracticeMode = "flashcard" | "multiple-choice" | "writing";

@@ -28,7 +28,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import type { MockWord, MockWordSetDetails } from "@/lib/mock-data";
+import type { MockWord, MockWordSetDetails } from "@/types/mock";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;

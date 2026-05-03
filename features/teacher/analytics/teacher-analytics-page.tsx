@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClassDetails } from "@/lib/mock-data";
+import { mockClassDetails } from "@/mock/mock-data";
 
 export function TeacherAnalyticsPage() {
   const totalStudents = mockClassDetails.reduce(

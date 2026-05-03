@@ -1,4 +1,4 @@
-import { StudentDashboardPage } from "@/components/student/student-dashboard-page";
+import { StudentDashboardPage } from "@/features/student/dashboard/student-dashboard-page";
 
 export default function StudentDashboardRoute() {
   return <StudentDashboardPage />;

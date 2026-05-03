@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { ClassDetailsPage } from "@/components/dashboard/class-details-page";
-import { getMockClassDetails } from "@/lib/mock-data";
+import { ClassDetailsPage } from "@/features/teacher/classes/class-details-page";
+import { getMockClassDetails } from "@/mock/mock-data";
 
 interface TeacherClassPageProps {
   params: Promise<{

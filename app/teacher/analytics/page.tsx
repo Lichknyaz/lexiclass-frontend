@@ -1,4 +1,4 @@
-import { TeacherAnalyticsPage } from "@/components/dashboard/teacher-analytics-page";
+import { TeacherAnalyticsPage } from "@/features/teacher/analytics/teacher-analytics-page";
 
 export default function AnalyticsPage() {
   return <TeacherAnalyticsPage />;

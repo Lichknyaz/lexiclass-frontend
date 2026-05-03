@@ -1,4 +1,4 @@
-import { TeacherWordSetsPage } from "@/components/dashboard/teacher-word-lists-page";
+import { TeacherWordSetsPage } from "@/features/teacher/word-sets/teacher-word-sets-page";
 
 export default function TeacherWordSetsRoute() {
   return <TeacherWordSetsPage />;

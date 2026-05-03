@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { PracticePage } from "@/components/student/practice-page";
-import { getMockStudentWordSet } from "@/lib/mock-data";
+import { PracticePage } from "@/features/student/practice/practice-page";
+import { getMockStudentWordSet } from "@/mock/mock-data";
 
 interface StudentPracticeRouteProps {
   params: Promise<{

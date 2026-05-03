@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/empty";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockWordSetSummaries } from "@/lib/mock-data";
+import { mockWordSetSummaries } from "@/mock/mock-data";
 
 export function TeacherWordSetsPage() {
   const wordSets = mockWordSetSummaries;

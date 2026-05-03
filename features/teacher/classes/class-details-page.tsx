@@ -32,12 +32,12 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { mockWordSetSummaries } from "@/mock/mock-data";
 import {
-  mockWordSetSummaries,
   type MockClassDetails,
   type MockWordSet,
   type MockWordSetSummary,
-} from "@/lib/mock-data";
+} from "@/types/mock";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;

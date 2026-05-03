@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { WordSetDetailsPage } from "@/components/dashboard/word-set-details-page";
-import { getMockWordSetDetails } from "@/lib/mock-data";
+import { WordSetDetailsPage } from "@/features/teacher/word-sets/word-set-details-page";
+import { getMockWordSetDetails } from "@/mock/mock-data";
 
 interface TeacherWordSetPageProps {
   params: Promise<{

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
-import { getMockStudentWordSets, mockStudentClasses } from "@/lib/mock-data";
+import { getMockStudentWordSets, mockStudentClasses } from "@/mock/mock-data";
 
 export function StudentDashboardPage() {
   const assignedWordSets = getMockStudentWordSets();

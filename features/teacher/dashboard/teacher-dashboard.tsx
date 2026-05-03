@@ -22,9 +22,11 @@ import {
   mockClassDetails,
   mockClasses,
   mockWordSetSummaries,
+} from "@/mock/mock-data";
+import {
   type MockProblemWord,
   type MockStudent,
-} from "@/lib/mock-data";
+} from "@/types/mock";
 
 export function TeacherDashboard() {
   const router = useRouter();

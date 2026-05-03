@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentShell } from "@/components/student/student-shell";
-import { mockStudentProgressWords } from "@/lib/mock-data";
+import { mockStudentProgressWords } from "@/mock/mock-data";
 
 export function StudentProgressPage() {
   const totalWordsPracticed = mockStudentProgressWords.length;
