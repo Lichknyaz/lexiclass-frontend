@@ -23,7 +23,7 @@ import {
   type MockStudentWordSet,
   type MockWord,
 } from "@/types/mock";
-import { cn } from "@/lib/utils";
+import { buildChoices, cn, getPercentage, normalizeAnswer } from "@/utils";
 
 type PracticeMode = "flashcard" | "multiple-choice" | "writing";
 type AnswerStatus = "correct" | "wrong" | null;
@@ -60,9 +60,7 @@ export function PracticePage({ wordSet }: PracticePageProps) {
 
   const currentWord = words[currentIndex];
   const answeredCount = correctCount + wrongCount;
-  const progress = words.length
-    ? Math.round((answeredCount / words.length) * 100)
-    : 0;
+  const progress = getPercentage(answeredCount, words.length);
 
   const choices = useMemo(
     () => buildChoices(words, currentWord),
@@ -432,7 +430,7 @@ function ResultCard({
   totalWords,
   onRestart,
 }: ResultCardProps) {
-  const score = totalWords ? Math.round((correctCount / totalWords) * 100) : 0;
+  const score = getPercentage(correctCount, totalWords);
 
   return (
     <Card>
@@ -460,33 +458,3 @@ function ResultCard({
   );
 }
 
-function normalizeAnswer(answer: string) {
-  return answer.trim().toLowerCase();
-}
-
-function buildChoices(words: MockWord[], currentWord?: MockWord) {
-  if (!currentWord) {
-    return [];
-  }
-
-  const wrongChoices = words
-    .filter((word) => word.id !== currentWord.id)
-    .map((word) => word.translation)
-    .slice(0, 3);
-
-  const fallbackChoices = [
-    "scheduled meeting",
-    "small first course",
-    "make a place clean",
-  ].filter((choice) => normalizeAnswer(choice) !== normalizeAnswer(currentWord.translation));
-
-  return shuffleChoices([
-    currentWord.translation,
-    ...wrongChoices,
-    ...fallbackChoices,
-  ].slice(0, 4));
-}
-
-function shuffleChoices(choices: string[]) {
-  return [...choices].sort((a, b) => a.localeCompare(b));
-}

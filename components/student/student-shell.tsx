@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, BookOpen, GraduationCap, LogOut, PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils";
 
 const navItems = [
   { icon: BookOpen, label: "Word Sets", href: "/student/dashboard" },

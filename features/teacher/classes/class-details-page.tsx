@@ -38,6 +38,7 @@ import {
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
+import { getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;
@@ -336,10 +337,7 @@ function ProblemWordsCard({
 
         <div className="flex flex-col gap-3">
           {problemWords.map((word) => {
-            const totalAnswers = word.correctAnswers + word.wrongAnswers;
-            const wrongRate = Math.round(
-              (word.wrongAnswers / totalAnswers) * 100,
-            );
+            const wrongRate = getMistakeRate(word);
 
             return (
               <div key={word.id} className="rounded-lg border p-3">

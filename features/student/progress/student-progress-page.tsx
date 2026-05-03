@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { StudentShell } from "@/components/student/student-shell";
 import { mockStudentProgressWords } from "@/mock/mock-data";
+import { getAverage } from "@/utils";
 
 export function StudentProgressPage() {
   const totalWordsPracticed = mockStudentProgressWords.length;
@@ -24,9 +25,8 @@ export function StudentProgressPage() {
     (total, word) => total + word.wrongCount,
     0,
   );
-  const progress = Math.round(
-    mockStudentProgressWords.reduce((total, word) => total + word.masteryLevel, 0) /
-      mockStudentProgressWords.length,
+  const progress = getAverage(
+    mockStudentProgressWords.map((word) => word.masteryLevel),
   );
   const weakWords = mockStudentProgressWords.filter(
     (word) => word.masteryLevel < 60,

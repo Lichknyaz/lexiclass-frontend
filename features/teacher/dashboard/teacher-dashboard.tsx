@@ -27,6 +27,7 @@ import {
   type MockProblemWord,
   type MockStudent,
 } from "@/types/mock";
+import { getAverage, getMistakeRate } from "@/utils";
 
 export function TeacherDashboard() {
   const router = useRouter();
@@ -36,9 +37,8 @@ export function TeacherDashboard() {
     (total, classItem) => total + classItem.students,
     0,
   );
-  const averageProgress = Math.round(
-    mockClasses.reduce((total, classItem) => total + classItem.progress, 0) /
-      mockClasses.length,
+  const averageProgress = getAverage(
+    mockClasses.map((classItem) => classItem.progress),
   );
   const problemWords = useMemo(() => getTopProblemWords(), []);
   const students = useMemo(() => getStudentPreviewData(), []);
@@ -177,11 +177,7 @@ function StatsCard({ icon: Icon, label, value }: StatsCardProps) {
 }
 
 function ProblemWordRow({ word }: { word: MockProblemWord }) {
-  const totalAnswers = word.correctAnswers + word.wrongAnswers;
-  const mistakeRate =
-    totalAnswers === 0
-      ? 0
-      : Math.round((word.wrongAnswers / totalAnswers) * 100);
+  const mistakeRate = getMistakeRate(word);
 
   return (
     <div className="px-4 py-2">
@@ -290,8 +286,8 @@ function getTopProblemWords() {
 
   return [...wordsByTerm.values()]
     .sort((a, b) => {
-      const aRate = a.wrongAnswers / (a.correctAnswers + a.wrongAnswers);
-      const bRate = b.wrongAnswers / (b.correctAnswers + b.wrongAnswers);
+      const aRate = getMistakeRate(a);
+      const bRate = getMistakeRate(b);
 
       return bRate - aRate;
     })
