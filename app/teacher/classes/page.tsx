@@ -1,4 +1,4 @@
-import { TeacherClassesPage } from "@/components/dashboard/teacher-classes-page";
+import { TeacherClassesPage } from "@/features/teacher/classes/teacher-classes-page";
 
 export default function TeacherClassesRoute() {
   return <TeacherClassesPage />;

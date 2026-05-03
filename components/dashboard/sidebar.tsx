@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, BarChart3, LayoutDashboard, LogOut, List } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils";
 
 interface SidebarProps {
   className?: string;

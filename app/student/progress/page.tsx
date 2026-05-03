@@ -1,4 +1,4 @@
-import { StudentProgressPage } from "@/components/student/student-progress-page";
+import { StudentProgressPage } from "@/features/student/progress/student-progress-page";
 
 export default function StudentProgressRoute() {
   return <StudentProgressPage />;

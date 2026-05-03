@@ -16,7 +16,7 @@ import { ClassCard, type ClassData } from "@/components/dashboard/class-card";
 import { CreateClassDialog } from "@/components/dashboard/create-class-dialog";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClasses } from "@/lib/mock-data";
+import { mockClasses } from "@/mock/mock-data";
 
 export function TeacherClassesPage() {
   const router = useRouter();

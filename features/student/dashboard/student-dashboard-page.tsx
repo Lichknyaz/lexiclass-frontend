@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
-import { getMockStudentWordSets, mockStudentClasses } from "@/lib/mock-data";
+import { getMockStudentWordSets, mockStudentClasses } from "@/mock/mock-data";
+import { getAverage } from "@/utils";
 
 export function StudentDashboardPage() {
   const assignedWordSets = getMockStudentWordSets();
-  const averageProgress = Math.round(
-    mockStudentClasses.reduce((total, classItem) => total + classItem.progress, 0) /
-      mockStudentClasses.length,
+  const averageProgress = getAverage(
+    mockStudentClasses.map((classItem) => classItem.progress),
   );
 
   return (

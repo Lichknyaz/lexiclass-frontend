@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClassDetails } from "@/lib/mock-data";
+import { mockClassDetails } from "@/mock/mock-data";
+import { getAverage, getMistakeRate } from "@/utils";
 
 export function TeacherAnalyticsPage() {
   const totalStudents = mockClassDetails.reduce(
@@ -24,9 +25,8 @@ export function TeacherAnalyticsPage() {
     (total, classItem) => total + classItem.wordSets,
     0,
   );
-  const averageProgress = Math.round(
-    mockClassDetails.reduce((total, classItem) => total + classItem.progress, 0) /
-      mockClassDetails.length,
+  const averageProgress = getAverage(
+    mockClassDetails.map((classItem) => classItem.progress),
   );
   const problemWords = mockClassDetails[0]?.problemWords ?? [];
 
@@ -114,10 +114,7 @@ export function TeacherAnalyticsPage() {
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
                   {problemWords.map((word) => {
-                    const totalAnswers = word.correctAnswers + word.wrongAnswers;
-                    const wrongRate = Math.round(
-                      (word.wrongAnswers / totalAnswers) * 100,
-                    );
+                    const wrongRate = getMistakeRate(word);
 
                     return (
                       <div key={word.id} className="rounded-lg border p-3">

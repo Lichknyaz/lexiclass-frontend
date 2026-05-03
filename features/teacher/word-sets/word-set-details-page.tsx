@@ -28,7 +28,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import type { MockWord, MockWordSetDetails } from "@/lib/mock-data";
+import type { MockWord, MockWordSetDetails } from "@/types/mock";
+import { getAverage } from "@/utils";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;
@@ -44,13 +45,7 @@ export function WordSetDetailsPage({
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const averageMastery =
-    words.length === 0
-      ? 0
-      : Math.round(
-          words.reduce((total, word) => total + word.masteryLevel, 0) /
-            words.length,
-        );
+  const averageMastery = getAverage(words.map((word) => word.masteryLevel));
 
   const problemWordsCount = words.filter((word) => word.masteryLevel < 60).length;
 
