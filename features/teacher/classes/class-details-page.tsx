@@ -2,15 +2,28 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookText,
   Check,
   Copy,
+  Pencil,
   Plus,
+  Trash2,
   TrendingDown,
   Users,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +31,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -30,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { mockWordSetSummaries } from "@/mock/mock-data";
@@ -45,8 +62,16 @@ interface ClassDetailsPageProps {
 }
 
 export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [classOverview, setClassOverview] = useState({
+    name: classDetails.name,
+    description: classDetails.description,
+    level: classDetails.level,
+  });
   const [assignedWordSets, setAssignedWordSets] = useState<MockWordSet[]>(
     classDetails.wordSetsList,
   );
@@ -93,6 +118,16 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     setAssignDialogOpen(false);
   };
 
+  const handleUpdateClassOverview = (overview: ClassOverviewInput) => {
+    setClassOverview(overview);
+    setEditDialogOpen(false);
+  };
+
+  const handleDeleteClass = () => {
+    setDeleteDialogOpen(false);
+    router.push("/teacher/classes");
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar className="hidden lg:flex" />
@@ -108,7 +143,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               </Link>
             </Button>
             <h1 className="truncate text-xl font-semibold">
-              {classDetails.name}
+              {classOverview.name}
             </h1>
           </div>
         </header>
@@ -121,13 +156,32 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <CardTitle className="text-2xl">
-                        {classDetails.name}
+                        {classOverview.name}
                       </CardTitle>
                       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                        {classDetails.description}
+                        {classOverview.description}
                       </p>
                     </div>
-                    <Badge variant="secondary">{classDetails.level}</Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="secondary">{classOverview.level}</Badge>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => setEditDialogOpen(true)}
+                        aria-label="Edit class"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        aria-label="Delete class"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-3">
@@ -288,6 +342,18 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
         availableWordSets={availableWordSets}
         onAssign={handleAssignWordSet}
       />
+      <EditClassDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        initialValue={classOverview}
+        onSave={handleUpdateClassOverview}
+      />
+      <DeleteClassDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        className={classOverview.name}
+        onDelete={handleDeleteClass}
+      />
     </div>
   );
 }
@@ -369,6 +435,153 @@ function ProblemWordsCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+interface ClassOverviewInput {
+  name: string;
+  description: string;
+  level: string;
+}
+
+interface EditClassDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialValue: ClassOverviewInput;
+  onSave: (overview: ClassOverviewInput) => void;
+}
+
+function EditClassDialog({
+  open,
+  onOpenChange,
+  initialValue,
+  onSave,
+}: EditClassDialogProps) {
+  const [name, setName] = useState(initialValue.name);
+  const [description, setDescription] = useState(initialValue.description);
+  const [level, setLevel] = useState(initialValue.level);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setName(initialValue.name);
+      setDescription(initialValue.description);
+      setLevel(initialValue.level);
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!name.trim() || !description.trim() || !level.trim()) {
+      return;
+    }
+
+    onSave({
+      name: name.trim(),
+      description: description.trim(),
+      level: level.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Class</DialogTitle>
+            <DialogDescription>
+              Update the class name, description, and level tag.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="class-name">Name</FieldLabel>
+              <Input
+                id="class-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g., English A2"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="class-description">Description</FieldLabel>
+              <Textarea
+                id="class-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Describe this class"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="class-level">Tag</FieldLabel>
+              <Input
+                id="class-level"
+                value={level}
+                onChange={(event) => setLevel(event.target.value)}
+                placeholder="e.g., A2"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!name.trim() || !description.trim() || !level.trim()}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteClassDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  className: string;
+  onDelete: () => void;
+}
+
+function DeleteClassDialog({
+  open,
+  onOpenChange,
+  className,
+  onDelete,
+}: DeleteClassDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete class?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove {className} from the local mock view. This action
+            cannot be undone in this session.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onDelete}
+          >
+            Delete Class
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
