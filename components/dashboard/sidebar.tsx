@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BarChart3, LogOut, List } from "lucide-react";
+import { BookOpen, BarChart3, LayoutDashboard, LogOut, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -10,7 +10,8 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { icon: BookOpen, label: "Classes", href: "/teacher/dashboard" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/teacher/dashboard" },
+  { icon: BookOpen, label: "Classes", href: "/teacher/classes" },
   { icon: List, label: "Word Sets", href: "/teacher/word-sets" },
   { icon: BarChart3, label: "Analytics", href: "/teacher/analytics" },
 ];
@@ -35,9 +36,7 @@ export function Sidebar({ className }: SidebarProps) {
         {navItems.map((item) => {
           const active =
             item.href === "/teacher/dashboard"
-              ? pathname === "/" ||
-                pathname === "/teacher/dashboard" ||
-                pathname.startsWith("/teacher/classes")
+              ? pathname === "/" || pathname === "/teacher/dashboard"
               : pathname.startsWith(item.href);
 
           return (

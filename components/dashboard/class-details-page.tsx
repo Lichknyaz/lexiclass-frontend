@@ -58,7 +58,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
           <div className="flex min-w-0 items-center gap-3">
             <MobileSidebar />
             <Button variant="ghost" size="icon-sm" asChild>
-              <Link href="/teacher/dashboard">
+              <Link href="/teacher/classes">
                 <ArrowLeft className="size-4" />
                 <span className="sr-only">Back to classes</span>
               </Link>
