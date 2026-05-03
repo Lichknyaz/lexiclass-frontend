@@ -14,6 +14,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -25,7 +32,12 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import type { MockClassDetails } from "@/lib/mock-data";
+import {
+  mockWordSetSummaries,
+  type MockClassDetails,
+  type MockWordSet,
+  type MockWordSetSummary,
+} from "@/lib/mock-data";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;
@@ -33,6 +45,19 @@ interface ClassDetailsPageProps {
 
 export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   const [copied, setCopied] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [assignedWordSets, setAssignedWordSets] = useState<MockWordSet[]>(
+    classDetails.wordSetsList,
+  );
+
+  const availableWordSets = mockWordSetSummaries.filter(
+    (wordSet) =>
+      !assignedWordSets.some(
+        (assignedWordSet) =>
+          assignedWordSet.id === `${classDetails.id}-${wordSet.id}` ||
+          assignedWordSet.id === wordSet.id,
+      ),
+  );
 
   const totalWrongAnswers = useMemo(
     () =>
@@ -47,6 +72,24 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     await navigator.clipboard.writeText(classDetails.inviteCode);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  const handleAssignWordSet = (wordSet: MockWordSetSummary) => {
+    const assignedWordSet: MockWordSet = {
+      id: `${classDetails.id}-${wordSet.id}`,
+      classId: classDetails.id,
+      title: wordSet.title,
+      description: wordSet.description,
+      words: wordSet.words,
+      assignedStudents: classDetails.students,
+      averageProgress: 0,
+    };
+
+    setAssignedWordSets((currentWordSets) => [
+      ...currentWordSets,
+      assignedWordSet,
+    ]);
+    setAssignDialogOpen(false);
   };
 
   return (
@@ -67,10 +110,6 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               {classDetails.name}
             </h1>
           </div>
-          <Button>
-            <Plus className="size-4" />
-            Create Word Set
-          </Button>
         </header>
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
@@ -202,14 +241,14 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <CardTitle>Word Sets</CardTitle>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => setAssignDialogOpen(true)}>
                     <Plus className="size-4" />
-                    Create Word Set
+                    Assign Word Set
                   </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {classDetails.wordSetsList.map((wordSet) => (
+                    {assignedWordSets.map((wordSet) => (
                       <Link
                         key={wordSet.id}
                         href={`/teacher/word-sets/${wordSet.id}?from=class`}
@@ -241,6 +280,13 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
           </div>
         </main>
       </div>
+
+      <AssignWordSetDialog
+        open={assignDialogOpen}
+        onOpenChange={setAssignDialogOpen}
+        availableWordSets={availableWordSets}
+        onAssign={handleAssignWordSet}
+      />
     </div>
   );
 }
@@ -285,15 +331,15 @@ function ProblemWordsCard({
           <div className="text-sm text-muted-foreground">
             Wrong answers tracked
           </div>
-          <div className="mt-1 text-2xl font-semibold">
-            {totalWrongAnswers}
-          </div>
+          <div className="mt-1 text-2xl font-semibold">{totalWrongAnswers}</div>
         </div>
 
         <div className="flex flex-col gap-3">
           {problemWords.map((word) => {
             const totalAnswers = word.correctAnswers + word.wrongAnswers;
-            const wrongRate = Math.round((word.wrongAnswers / totalAnswers) * 100);
+            const wrongRate = Math.round(
+              (word.wrongAnswers / totalAnswers) * 100,
+            );
 
             return (
               <div key={word.id} className="rounded-lg border p-3">
@@ -325,5 +371,62 @@ function ProblemWordsCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+interface AssignWordSetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  availableWordSets: MockWordSetSummary[];
+  onAssign: (wordSet: MockWordSetSummary) => void;
+}
+
+function AssignWordSetDialog({
+  open,
+  onOpenChange,
+  availableWordSets,
+  onAssign,
+}: AssignWordSetDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Assign Word Set</DialogTitle>
+          <DialogDescription>
+            Choose an existing word set to assign to this class.
+          </DialogDescription>
+        </DialogHeader>
+
+        {availableWordSets.length === 0 ? (
+          <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+            All existing word sets are already assigned to this class.
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {availableWordSets.map((wordSet) => (
+              <div
+                key={wordSet.id}
+                className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="font-medium">{wordSet.title}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    {wordSet.description}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                    <Badge variant="outline">{wordSet.words} words</Badge>
+                    <span>{wordSet.assignedClasses} assigned classes</span>
+                  </div>
+                </div>
+                <Button onClick={() => onAssign(wordSet)}>
+                  <Plus className="size-4" />
+                  Assign
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
