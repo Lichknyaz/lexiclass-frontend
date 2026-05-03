@@ -6,13 +6,6 @@ import { BookOpen, Play, PlusCircle, Target, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
 import { getMockStudentWordSets, mockStudentClasses } from "@/mock/mock-data";
@@ -22,8 +15,6 @@ import { getAverage } from "@/utils";
 export function StudentDashboardPage() {
   const assignedWordSets = getMockStudentWordSets();
   const [wordSetFilter, setWordSetFilter] = useState<WordSetFilter>("all");
-  const [detailsWordSet, setDetailsWordSet] =
-    useState<MockStudentWordSet | null>(null);
   const averageProgress = getAverage(
     mockStudentClasses.map((classItem) => classItem.progress),
   );
@@ -146,11 +137,10 @@ export function StudentDashboardPage() {
                 </div>
                 <Progress value={wordSet.progress} className="h-2" />
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setDetailsWordSet(wordSet)}
-                  >
-                    View details
+                  <Button variant="outline" asChild>
+                    <Link href={`/student/word-sets/${wordSet.id}`}>
+                      View details
+                    </Link>
                   </Button>
                   <Button asChild>
                     <Link href={`/student/word-sets/${wordSet.id}/practice`}>
@@ -164,14 +154,6 @@ export function StudentDashboardPage() {
         </section>
       </div>
 
-      <WordSetDetailsDialog
-        wordSet={detailsWordSet}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDetailsWordSet(null);
-          }
-        }}
-      />
     </StudentShell>
   );
 }
@@ -221,56 +203,6 @@ function matchesWordSetFilter(
 
 function isDueToday(wordSet: MockStudentWordSet) {
   return wordSet.dueLabel.toLowerCase().includes("today");
-}
-
-function WordSetDetailsDialog({
-  wordSet,
-  onOpenChange,
-}: {
-  wordSet: MockStudentWordSet | null;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <Dialog open={Boolean(wordSet)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{wordSet?.title ?? "Word set details"}</DialogTitle>
-          <DialogDescription>{wordSet?.className}</DialogDescription>
-        </DialogHeader>
-
-        {wordSet && (
-          <div className="grid gap-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                {wordSet.completedWords} of {wordSet.words} words practiced
-              </span>
-              <span className="font-medium text-foreground">
-                {wordSet.progress}%
-              </span>
-            </div>
-            <Progress value={wordSet.progress} className="h-2" />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SummaryCard
-                icon={BookOpen}
-                label="Words left"
-                value={wordSet.words - wordSet.completedWords}
-              />
-              <SummaryCard
-                icon={Target}
-                label="Status"
-                value={wordSet.dueLabel}
-              />
-            </div>
-            <Button asChild>
-              <Link href={`/student/word-sets/${wordSet.id}/practice`}>
-                Continue Practice
-              </Link>
-            </Button>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 interface SummaryCardProps {
