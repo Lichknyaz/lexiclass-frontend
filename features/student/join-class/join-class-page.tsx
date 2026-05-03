@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,14 +13,24 @@ import { StudentShell } from "@/components/student/student-shell";
 export function JoinClassPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [joinedClassName, setJoinedClassName] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!inviteCode.trim()) {
+    const normalizedCode = inviteCode.trim().toUpperCase();
+
+    if (!normalizedCode) {
       return;
     }
 
+    if (normalizedCode !== "A2-7KQ9") {
+      setJoinedClassName("");
+      setErrorMessage("Invalid invite code. Check the code and try again.");
+      return;
+    }
+
+    setErrorMessage("");
     setJoinedClassName("English A2");
   };
 
@@ -35,6 +45,14 @@ export function JoinClassPage() {
               You joined {joinedClassName}. New word sets are now available on
               your dashboard.
             </AlertDescription>
+          </Alert>
+        )}
+
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertTitle>Invalid invite code</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         )}
 

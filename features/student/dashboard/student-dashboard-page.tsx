@@ -6,6 +6,14 @@ import { BookOpen, Play, PlusCircle, Target, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
 import { getMockStudentWordSets, mockStudentClasses } from "@/mock/mock-data";
@@ -14,9 +22,12 @@ import { getAverage } from "@/utils";
 
 export function StudentDashboardPage() {
   const assignedWordSets = getMockStudentWordSets();
+  const joinedClasses = mockStudentClasses;
+  const hasJoinedClasses = joinedClasses.length > 0;
+  const hasAssignedWordSets = assignedWordSets.length > 0;
   const [wordSetFilter, setWordSetFilter] = useState<WordSetFilter>("all");
   const averageProgress = getAverage(
-    mockStudentClasses.map((classItem) => classItem.progress),
+    joinedClasses.map((classItem) => classItem.progress),
   );
   const continueWordSet = useMemo(
     () => getContinueWordSet(assignedWordSets),
@@ -43,7 +54,39 @@ export function StudentDashboardPage() {
       }
     >
       <div className="flex flex-col gap-4">
-        {continueWordSet && (
+        {!hasJoinedClasses ? (
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Users />
+              </EmptyMedia>
+              <EmptyTitle>No joined classes</EmptyTitle>
+              <EmptyDescription>
+                Join a class with an invite code to start practicing vocabulary.
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button asChild>
+                <Link href="/student/join-class">
+                  <PlusCircle className="size-4" />
+                  Join Class
+                </Link>
+              </Button>
+            </EmptyContent>
+          </Empty>
+        ) : !hasAssignedWordSets ? (
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <BookOpen />
+              </EmptyMedia>
+              <EmptyTitle>No assigned word sets</EmptyTitle>
+              <EmptyDescription>
+                Your teacher has not assigned vocabulary practice yet.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : continueWordSet && (
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -81,7 +124,7 @@ export function StudentDashboardPage() {
           <SummaryCard
             icon={Users}
             label="Classes"
-            value={mockStudentClasses.length}
+            value={joinedClasses.length}
           />
           <SummaryCard
             icon={BookOpen}
@@ -95,26 +138,29 @@ export function StudentDashboardPage() {
           />
         </section>
 
-        <div className="flex flex-wrap gap-2">
-          {wordSetFilterOptions.map((option) => (
-            <Button
-              key={option.value}
-              type="button"
-              size="sm"
-              variant={wordSetFilter === option.value ? "default" : "outline"}
-              onClick={() => setWordSetFilter(option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+        {hasAssignedWordSets && (
+          <div className="flex flex-wrap gap-2">
+            {wordSetFilterOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={wordSetFilter === option.value ? "default" : "outline"}
+                onClick={() => setWordSetFilter(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        )}
 
-        <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {filteredWordSets.map((wordSet) => (
-            <Card
-              key={wordSet.id}
-              className="transition-shadow hover:shadow-md"
-            >
+        {hasAssignedWordSets && (
+          <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {filteredWordSets.map((wordSet) => (
+              <Card
+                key={wordSet.id}
+                className="transition-shadow hover:shadow-md"
+              >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -149,9 +195,10 @@ export function StudentDashboardPage() {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
-          ))}
-        </section>
+              </Card>
+            ))}
+          </section>
+        )}
       </div>
 
     </StudentShell>
