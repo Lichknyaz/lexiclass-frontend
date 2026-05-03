@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle2,
+  DoorOpen,
   Keyboard,
   Layers,
   ListChecks,
@@ -26,6 +27,7 @@ import {
 import { buildChoices, cn, getPercentage, normalizeAnswer } from "@/utils";
 
 type PracticeMode = "flashcard" | "multiple-choice" | "writing";
+type WordScope = "all" | "weak" | "new";
 type AnswerStatus = "correct" | "wrong" | null;
 
 const practiceModes: Array<{
@@ -43,12 +45,15 @@ interface PracticePageProps {
 }
 
 export function PracticePage({ wordSet }: PracticePageProps) {
-  const words = useMemo(() => {
+  const allWords = useMemo(() => {
     const teacherSet = getMockWordSetDetails(wordSet.id);
     return teacherSet?.wordsList ?? getMockWordSetDetails("w1")?.wordsList ?? [];
   }, [wordSet.id]);
 
   const [mode, setMode] = useState<PracticeMode>("flashcard");
+  const [wordScope, setWordScope] = useState<WordScope>("all");
+  const [started, setStarted] = useState(false);
+  const [sessionWords, setSessionWords] = useState<MockWord[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
@@ -58,6 +63,7 @@ export function PracticePage({ wordSet }: PracticePageProps) {
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>(null);
   const [completed, setCompleted] = useState(false);
 
+  const words = started ? sessionWords : getWordsByScope(allWords, wordScope);
   const currentWord = words[currentIndex];
   const answeredCount = correctCount + wrongCount;
   const progress = getPercentage(answeredCount, words.length);
@@ -83,12 +89,32 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     resetQuestionState();
   };
 
-  const recordAnswer = (correct: boolean) => {
-    if (correct) {
-      setCorrectCount((value) => value + 1);
-    } else {
-      setWrongCount((value) => value + 1);
+  const startSession = () => {
+    const nextWords = getWordsByScope(allWords, wordScope);
+
+    setSessionWords(nextWords.length > 0 ? nextWords : allWords);
+    setStarted(true);
+    setCurrentIndex(0);
+    setCorrectCount(0);
+    setWrongCount(0);
+    setCompleted(false);
+    resetQuestionState();
+  };
+
+  const exitSession = () => {
+    setStarted(false);
+    resetSession();
+  };
+
+  const goToNextWord = () => {
+    if (!answerStatus) {
+      return;
     }
+
+    setCorrectCount((value) =>
+      answerStatus === "correct" ? value + 1 : value,
+    );
+    setWrongCount((value) => (answerStatus === "wrong" ? value + 1 : value));
 
     const lastQuestion = currentIndex >= words.length - 1;
 
@@ -101,8 +127,16 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     resetQuestionState();
   };
 
-  const handleModeChange = (nextMode: PracticeMode) => {
-    resetSession(nextMode);
+  const skipWord = () => {
+    const lastQuestion = currentIndex >= words.length - 1;
+
+    if (lastQuestion) {
+      setCompleted(true);
+      return;
+    }
+
+    setCurrentIndex((index) => index + 1);
+    resetQuestionState();
   };
 
   const handleMultipleChoice = (answer: string) => {
@@ -128,6 +162,11 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     setShowAnswer(true);
   };
 
+  const handleFlashcardAnswer = (correct: boolean) => {
+    setAnswerStatus(correct ? "correct" : "wrong");
+    setShowAnswer(true);
+  };
+
   return (
     <StudentShell
       title="Practice"
@@ -141,6 +180,18 @@ export function PracticePage({ wordSet }: PracticePageProps) {
       }
     >
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
+        {!started ? (
+          <SetupCard
+            wordSet={wordSet}
+            mode={mode}
+            wordScope={wordScope}
+            availableWords={words.length}
+            onModeChange={setMode}
+            onWordScopeChange={setWordScope}
+            onStart={startSession}
+          />
+        ) : (
+          <>
         <Card>
           <CardHeader className="pb-3">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -157,17 +208,17 @@ export function PracticePage({ wordSet }: PracticePageProps) {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-2 sm:grid-cols-3">
-              {practiceModes.map((item) => (
-                <Button
-                  key={item.id}
-                  type="button"
-                  variant={mode === item.id ? "default" : "outline"}
-                  onClick={() => handleModeChange(item.id)}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Button>
-              ))}
+              <Button variant="outline" onClick={exitSession}>
+                <DoorOpen className="size-4" />
+                Exit session
+              </Button>
+              <Button
+                variant="outline"
+                onClick={skipWord}
+                disabled={completed || !currentWord}
+              >
+                Skip word
+              </Button>
             </div>
 
             <div>
@@ -189,7 +240,7 @@ export function PracticePage({ wordSet }: PracticePageProps) {
             correctCount={correctCount}
             wrongCount={wrongCount}
             totalWords={words.length}
-            onRestart={() => resetSession()}
+            onRestart={startSession}
           />
         ) : (
           currentWord && (
@@ -203,10 +254,10 @@ export function PracticePage({ wordSet }: PracticePageProps) {
                 writtenAnswer={writtenAnswer}
                 answerStatus={answerStatus}
                 onToggleAnswer={() => setShowAnswer((visible) => !visible)}
-                onFlashcardAnswer={recordAnswer}
                 onMultipleChoice={handleMultipleChoice}
                 onWritingChange={setWrittenAnswer}
                 onWritingSubmit={handleWritingSubmit}
+                onFlashcardAnswer={handleFlashcardAnswer}
               />
 
               {answerStatus && (
@@ -218,8 +269,9 @@ export function PracticePage({ wordSet }: PracticePageProps) {
                         ? currentWord.term
                         : currentWord.translation
                     }
+                    exampleSentence={currentWord.exampleSentence}
                   />
-                  <Button onClick={() => recordAnswer(answerStatus === "correct")}>
+                  <Button onClick={goToNextWord}>
                     Next Word
                   </Button>
                 </div>
@@ -242,10 +294,102 @@ export function PracticePage({ wordSet }: PracticePageProps) {
             <span className="font-medium text-foreground">{currentIndex}</span>
           </span>
         </div>
+          </>
+        )}
       </div>
     </StudentShell>
   );
 }
+
+function getWordsByScope(words: MockWord[], scope: WordScope) {
+  if (scope === "weak") {
+    return words.filter((word) => word.masteryLevel < 60);
+  }
+
+  if (scope === "new") {
+    return words.filter((word) => word.masteryLevel === 0);
+  }
+
+  return words;
+}
+
+interface SetupCardProps {
+  wordSet: MockStudentWordSet;
+  mode: PracticeMode;
+  wordScope: WordScope;
+  availableWords: number;
+  onModeChange: (mode: PracticeMode) => void;
+  onWordScopeChange: (scope: WordScope) => void;
+  onStart: () => void;
+}
+
+function SetupCard({
+  wordSet,
+  mode,
+  wordScope,
+  availableWords,
+  onModeChange,
+  onWordScopeChange,
+  onStart,
+}: SetupCardProps) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-2xl">{wordSet.title}</CardTitle>
+        <p className="text-sm text-muted-foreground">{wordSet.className}</p>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-6">
+        <div className="grid gap-3">
+          <div className="text-sm font-medium">Choose mode</div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {practiceModes.map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                variant={mode === item.id ? "default" : "outline"}
+                onClick={() => onModeChange(item.id)}
+              >
+                <item.icon className="size-4" />
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-3">
+          <div className="text-sm font-medium">Choose words</div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {wordScopeOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={wordScope === option.value ? "default" : "outline"}
+                onClick={() => onWordScopeChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-4 py-3 text-sm">
+          <span className="text-muted-foreground">Words selected</span>
+          <span className="font-medium">{availableWords}</span>
+        </div>
+
+        <Button onClick={onStart} disabled={availableWords === 0}>
+          Start Practice
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+const wordScopeOptions: Array<{ label: string; value: WordScope }> = [
+  { label: "All", value: "all" },
+  { label: "Weak only", value: "weak" },
+  { label: "New only", value: "new" },
+];
 
 interface PracticeCardProps {
   mode: PracticeMode;
@@ -397,9 +541,14 @@ function QuestionHeader({ label, value }: QuestionHeaderProps) {
 interface AnswerFeedbackProps {
   status: Exclude<AnswerStatus, null>;
   correctAnswer: string;
+  exampleSentence: string;
 }
 
-function AnswerFeedback({ status, correctAnswer }: AnswerFeedbackProps) {
+function AnswerFeedback({
+  status,
+  correctAnswer,
+  exampleSentence,
+}: AnswerFeedbackProps) {
   return (
     <div
       className={cn(
@@ -413,6 +562,7 @@ function AnswerFeedback({ status, correctAnswer }: AnswerFeedbackProps) {
         {status === "correct" ? "Correct answer" : "Wrong answer"}
       </div>
       <div className="mt-1">Correct: {correctAnswer}</div>
+      <div className="mt-2 text-muted-foreground">{exampleSentence}</div>
     </div>
   );
 }
