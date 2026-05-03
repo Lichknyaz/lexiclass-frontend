@@ -65,9 +65,7 @@ export function TeacherWordSetsPage() {
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-lg">
-                        {wordSet.title}
-                      </CardTitle>
+                      <CardTitle className="text-lg">{wordSet.title}</CardTitle>
                       <Badge variant="outline">{wordSet.words} words</Badge>
                     </div>
                   </CardHeader>
@@ -81,16 +79,12 @@ export function TeacherWordSetsPage() {
                       <span>{wordSet.assignedClasses} assigned classes</span>
                     </div>
 
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid">
                       <Button variant="outline" asChild>
-                        <Link href={`/teacher/word-sets/${wordSet.id}?from=word-sets`}>
+                        <Link
+                          href={`/teacher/word-sets/${wordSet.id}?from=word-sets`}
+                        >
                           Open
-                        </Link>
-                      </Button>
-                      <Button variant="secondary" asChild>
-                        <Link href={`/teacher/word-sets/${wordSet.id}?from=word-sets`}>
-                          <Edit className="size-4" />
-                          Edit
                         </Link>
                       </Button>
                     </div>

@@ -1,16 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookText,
   Check,
   Copy,
+  Eye,
+  MoreHorizontal,
+  Pencil,
   Plus,
+  Trash2,
   TrendingDown,
   Users,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +33,19 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import {
   Table,
@@ -30,11 +55,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { mockWordSetSummaries } from "@/mock/mock-data";
 import {
   type MockClassDetails,
+  type MockStudent,
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
@@ -45,8 +72,26 @@ interface ClassDetailsPageProps {
 }
 
 export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [inviteStudentDialogOpen, setInviteStudentDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [progressDialogStudent, setProgressDialogStudent] =
+    useState<MockStudent | null>(null);
+  const [editStudentDialogStudent, setEditStudentDialogStudent] =
+    useState<MockStudent | null>(null);
+  const [removeStudentDialogStudent, setRemoveStudentDialogStudent] =
+    useState<MockStudent | null>(null);
+  const [classOverview, setClassOverview] = useState({
+    name: classDetails.name,
+    description: classDetails.description,
+    level: classDetails.level,
+  });
+  const [students, setStudents] = useState<MockStudent[]>(
+    classDetails.studentsList,
+  );
   const [assignedWordSets, setAssignedWordSets] = useState<MockWordSet[]>(
     classDetails.wordSetsList,
   );
@@ -82,7 +127,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
       title: wordSet.title,
       description: wordSet.description,
       words: wordSet.words,
-      assignedStudents: classDetails.students,
+      assignedStudents: students.length,
       averageProgress: 0,
     };
 
@@ -91,6 +136,62 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
       assignedWordSet,
     ]);
     setAssignDialogOpen(false);
+  };
+
+  const handleUpdateClassOverview = (overview: ClassOverviewInput) => {
+    setClassOverview(overview);
+    setEditDialogOpen(false);
+  };
+
+  const handleDeleteClass = () => {
+    setDeleteDialogOpen(false);
+    router.push("/teacher/classes");
+  };
+
+  const handleAddStudent = (student: NewStudentInput) => {
+    const fallbackName = student.email.split("@")[0] || "New student";
+
+    setStudents((currentStudents) => [
+      ...currentStudents,
+      {
+        id: Date.now().toString(),
+        name: student.name.trim() || fallbackName,
+        email: student.email.trim(),
+        progress: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        lastPracticedAt: "Not practiced yet",
+      },
+    ]);
+    setInviteStudentDialogOpen(false);
+  };
+
+  const handleUpdateStudent = (updatedStudent: StudentProfileInput) => {
+    setStudents((currentStudents) =>
+      currentStudents.map((student) =>
+        student.id === updatedStudent.id
+          ? {
+              ...student,
+              name: updatedStudent.name,
+              email: updatedStudent.email,
+            }
+          : student,
+      ),
+    );
+    setEditStudentDialogStudent(null);
+  };
+
+  const handleRemoveStudent = () => {
+    if (!removeStudentDialogStudent) {
+      return;
+    }
+
+    setStudents((currentStudents) =>
+      currentStudents.filter(
+        (student) => student.id !== removeStudentDialogStudent.id,
+      ),
+    );
+    setRemoveStudentDialogStudent(null);
   };
 
   return (
@@ -108,7 +209,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               </Link>
             </Button>
             <h1 className="truncate text-xl font-semibold">
-              {classDetails.name}
+              {classOverview.name}
             </h1>
           </div>
         </header>
@@ -121,20 +222,39 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <CardTitle className="text-2xl">
-                        {classDetails.name}
+                        {classOverview.name}
                       </CardTitle>
                       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                        {classDetails.description}
+                        {classOverview.description}
                       </p>
                     </div>
-                    <Badge variant="secondary">{classDetails.level}</Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="secondary">{classOverview.level}</Badge>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => setEditDialogOpen(true)}
+                        aria-label="Edit class"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        aria-label="Delete class"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-3">
                   <SummaryMetric
                     icon={Users}
                     label="Students"
-                    value={classDetails.students}
+                    value={students.length}
                   />
                   <SummaryMetric
                     icon={BookText}
@@ -180,8 +300,15 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
 
             <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <CardTitle>Students</CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => setInviteStudentDialogOpen(true)}
+                  >
+                    <Plus className="size-4" />
+                    Invite / Add Student
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -191,10 +318,13 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                         <TableHead>Progress</TableHead>
                         <TableHead className="text-right">Answers</TableHead>
                         <TableHead>Last practice</TableHead>
+                        <TableHead className="w-12 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {classDetails.studentsList.map((student) => (
+                      {students.map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
                             <div className="font-medium">{student.name}</div>
@@ -224,6 +354,14 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {student.lastPracticedAt}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <StudentActionsMenu
+                              student={student}
+                              onViewProgress={setProgressDialogStudent}
+                              onEdit={setEditStudentDialogStudent}
+                              onRemove={setRemoveStudentDialogStudent}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -287,6 +425,52 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
         onOpenChange={setAssignDialogOpen}
         availableWordSets={availableWordSets}
         onAssign={handleAssignWordSet}
+      />
+      <InviteStudentDialog
+        open={inviteStudentDialogOpen}
+        onOpenChange={setInviteStudentDialogOpen}
+        inviteCode={classDetails.inviteCode}
+        onAddStudent={handleAddStudent}
+      />
+      <StudentProgressDialog
+        student={progressDialogStudent}
+        className={classOverview.name}
+        weakWords={classDetails.problemWords}
+        onOpenChange={(open) => {
+          if (!open) {
+            setProgressDialogStudent(null);
+          }
+        }}
+      />
+      <EditStudentDialog
+        student={editStudentDialogStudent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditStudentDialogStudent(null);
+          }
+        }}
+        onSave={handleUpdateStudent}
+      />
+      <RemoveStudentDialog
+        student={removeStudentDialogStudent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRemoveStudentDialogStudent(null);
+          }
+        }}
+        onRemove={handleRemoveStudent}
+      />
+      <EditClassDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        initialValue={classOverview}
+        onSave={handleUpdateClassOverview}
+      />
+      <DeleteClassDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        className={classOverview.name}
+        onDelete={handleDeleteClass}
       />
     </div>
   );
@@ -369,6 +553,543 @@ function ProblemWordsCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+interface StudentActionsMenuProps {
+  student: MockStudent;
+  onViewProgress: (student: MockStudent) => void;
+  onEdit: (student: MockStudent) => void;
+  onRemove: (student: MockStudent) => void;
+}
+
+function StudentActionsMenu({
+  student,
+  onViewProgress,
+  onEdit,
+  onRemove,
+}: StudentActionsMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="Student actions">
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onViewProgress(student)}
+        >
+          <Eye className="size-4" />
+          View progress
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onEdit(student)}
+        >
+          <Pencil className="size-4" />
+          Edit student
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          variant="destructive"
+          onClick={() => onRemove(student)}
+        >
+          <Trash2 className="size-4" />
+          Remove from class
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+interface NewStudentInput {
+  email: string;
+  name: string;
+}
+
+interface InviteStudentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  inviteCode: string;
+  onAddStudent: (student: NewStudentInput) => void;
+}
+
+function InviteStudentDialog({
+  open,
+  onOpenChange,
+  inviteCode,
+  onAddStudent,
+}: InviteStudentDialogProps) {
+  const [copied, setCopied] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+
+  const handleCopyInviteCode = async () => {
+    await navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!email.trim()) {
+      return;
+    }
+
+    onAddStudent({
+      email: email.trim(),
+      name: name.trim(),
+    });
+    setEmail("");
+    setName("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Invite or Add Student</DialogTitle>
+            <DialogDescription>
+              Share the invite code or add a student directly by email.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <div className="text-sm text-muted-foreground">Invite code</div>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="rounded-md border bg-background px-3 py-2 font-mono text-lg font-semibold tracking-wide">
+                  {inviteCode}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCopyInviteCode}
+                >
+                  {copied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  {copied ? "Copied" : "Copy invite code"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
+              <div className="h-px flex-1 bg-border" />
+              or
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="student-email">Student email</FieldLabel>
+              <Input
+                id="student-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="student@example.com"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="student-name">Student name</FieldLabel>
+              <Input
+                id="student-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Optional"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!email.trim()}>
+              Add Student
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface StudentProgressDialogProps {
+  student: MockStudent | null;
+  className: string;
+  weakWords: MockClassDetails["problemWords"];
+  onOpenChange: (open: boolean) => void;
+}
+
+function StudentProgressDialog({
+  student,
+  className,
+  weakWords,
+  onOpenChange,
+}: StudentProgressDialogProps) {
+  return (
+    <Dialog open={Boolean(student)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{student?.name ?? "Student progress"}</DialogTitle>
+          <DialogDescription>{className}</DialogDescription>
+        </DialogHeader>
+
+        {student && (
+          <div className="grid gap-4">
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">{student.progress}%</span>
+              </div>
+              <Progress value={student.progress} className="mt-3 h-2" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SummaryMetric
+                icon={Check}
+                label="Correct"
+                value={student.correctAnswers}
+              />
+              <SummaryMetric
+                icon={TrendingDown}
+                label="Wrong"
+                value={student.wrongAnswers}
+              />
+              <SummaryMetric
+                icon={BookText}
+                label="Weak words"
+                value={weakWords.length}
+              />
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="text-sm font-medium">Weak words</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {weakWords.map((word) => (
+                  <Badge key={word.id} variant="outline">
+                    {word.term}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              Last practice:{" "}
+              <span className="font-medium text-foreground">
+                {student.lastPracticedAt}
+              </span>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface StudentProfileInput {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface EditStudentDialogProps {
+  student: MockStudent | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (student: StudentProfileInput) => void;
+}
+
+function EditStudentDialog({
+  student,
+  onOpenChange,
+  onSave,
+}: EditStudentDialogProps) {
+  const [name, setName] = useState(student?.name ?? "");
+  const [email, setEmail] = useState(student?.email ?? "");
+
+  useEffect(() => {
+    if (!student) {
+      return;
+    }
+
+    setName(student.name);
+    setEmail(student.email);
+  }, [student]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && student) {
+      setName(student.name);
+      setEmail(student.email);
+    }
+
+    onOpenChange(open);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!student || !name.trim() || !email.trim()) {
+      return;
+    }
+
+    onSave({
+      id: student.id,
+      name: name.trim(),
+      email: email.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={Boolean(student)} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>Update student profile details.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="edit-student-name">Name</FieldLabel>
+              <Input
+                id="edit-student-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Student name"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-student-email">Email</FieldLabel>
+              <Input
+                id="edit-student-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="student@example.com"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!name.trim() || !email.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface RemoveStudentDialogProps {
+  student: MockStudent | null;
+  onOpenChange: (open: boolean) => void;
+  onRemove: () => void;
+}
+
+function RemoveStudentDialog({
+  student,
+  onOpenChange,
+  onRemove,
+}: RemoveStudentDialogProps) {
+  return (
+    <AlertDialog open={Boolean(student)} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove student from this class?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {student?.name} will be removed from this class in the local mock
+            view.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onRemove}
+          >
+            Remove
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+interface ClassOverviewInput {
+  name: string;
+  description: string;
+  level: string;
+}
+
+interface EditClassDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialValue: ClassOverviewInput;
+  onSave: (overview: ClassOverviewInput) => void;
+}
+
+function EditClassDialog({
+  open,
+  onOpenChange,
+  initialValue,
+  onSave,
+}: EditClassDialogProps) {
+  const [name, setName] = useState(initialValue.name);
+  const [description, setDescription] = useState(initialValue.description);
+  const [level, setLevel] = useState(initialValue.level);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setName(initialValue.name);
+    setDescription(initialValue.description);
+    setLevel(initialValue.level);
+  }, [initialValue.description, initialValue.level, initialValue.name, open]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setName(initialValue.name);
+      setDescription(initialValue.description);
+      setLevel(initialValue.level);
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!name.trim() || !description.trim() || !level.trim()) {
+      return;
+    }
+
+    onSave({
+      name: name.trim(),
+      description: description.trim(),
+      level: level.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Class</DialogTitle>
+            <DialogDescription>
+              Update the class name, description, and level tag.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="class-name">Name</FieldLabel>
+              <Input
+                id="class-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g., English A2"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="class-description">Description</FieldLabel>
+              <Textarea
+                id="class-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Describe this class"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="class-level">Tag</FieldLabel>
+              <Input
+                id="class-level"
+                value={level}
+                onChange={(event) => setLevel(event.target.value)}
+                placeholder="e.g., A2"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!name.trim() || !description.trim() || !level.trim()}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteClassDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  className: string;
+  onDelete: () => void;
+}
+
+function DeleteClassDialog({
+  open,
+  onOpenChange,
+  className,
+  onDelete,
+}: DeleteClassDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete class?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove {className} from the local mock view. This action
+            cannot be undone in this session.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onDelete}
+          >
+            Delete Class
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

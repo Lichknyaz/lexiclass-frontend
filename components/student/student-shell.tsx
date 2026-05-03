@@ -56,7 +56,7 @@ export function StudentShell({ title, action, children }: StudentShellProps) {
         </nav>
 
         <div className="border-t p-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+          <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <LogOut className="size-5" />
             Logout
           </button>
