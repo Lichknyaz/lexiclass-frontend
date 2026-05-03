@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,8 @@ import {
   BookText,
   Check,
   Copy,
+  Eye,
+  MoreHorizontal,
   Pencil,
   Plus,
   Trash2,
@@ -35,6 +37,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -52,6 +61,7 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { mockWordSetSummaries } from "@/mock/mock-data";
 import {
   type MockClassDetails,
+  type MockStudent,
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
@@ -65,13 +75,23 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [inviteStudentDialogOpen, setInviteStudentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [progressDialogStudent, setProgressDialogStudent] =
+    useState<MockStudent | null>(null);
+  const [editStudentDialogStudent, setEditStudentDialogStudent] =
+    useState<MockStudent | null>(null);
+  const [removeStudentDialogStudent, setRemoveStudentDialogStudent] =
+    useState<MockStudent | null>(null);
   const [classOverview, setClassOverview] = useState({
     name: classDetails.name,
     description: classDetails.description,
     level: classDetails.level,
   });
+  const [students, setStudents] = useState<MockStudent[]>(
+    classDetails.studentsList,
+  );
   const [assignedWordSets, setAssignedWordSets] = useState<MockWordSet[]>(
     classDetails.wordSetsList,
   );
@@ -107,7 +127,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
       title: wordSet.title,
       description: wordSet.description,
       words: wordSet.words,
-      assignedStudents: classDetails.students,
+      assignedStudents: students.length,
       averageProgress: 0,
     };
 
@@ -126,6 +146,52 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   const handleDeleteClass = () => {
     setDeleteDialogOpen(false);
     router.push("/teacher/classes");
+  };
+
+  const handleAddStudent = (student: NewStudentInput) => {
+    const fallbackName = student.email.split("@")[0] || "New student";
+
+    setStudents((currentStudents) => [
+      ...currentStudents,
+      {
+        id: Date.now().toString(),
+        name: student.name.trim() || fallbackName,
+        email: student.email.trim(),
+        progress: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        lastPracticedAt: "Not practiced yet",
+      },
+    ]);
+    setInviteStudentDialogOpen(false);
+  };
+
+  const handleUpdateStudent = (updatedStudent: StudentProfileInput) => {
+    setStudents((currentStudents) =>
+      currentStudents.map((student) =>
+        student.id === updatedStudent.id
+          ? {
+              ...student,
+              name: updatedStudent.name,
+              email: updatedStudent.email,
+            }
+          : student,
+      ),
+    );
+    setEditStudentDialogStudent(null);
+  };
+
+  const handleRemoveStudent = () => {
+    if (!removeStudentDialogStudent) {
+      return;
+    }
+
+    setStudents((currentStudents) =>
+      currentStudents.filter(
+        (student) => student.id !== removeStudentDialogStudent.id,
+      ),
+    );
+    setRemoveStudentDialogStudent(null);
   };
 
   return (
@@ -188,7 +254,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                   <SummaryMetric
                     icon={Users}
                     label="Students"
-                    value={classDetails.students}
+                    value={students.length}
                   />
                   <SummaryMetric
                     icon={BookText}
@@ -234,8 +300,15 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
 
             <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <CardTitle>Students</CardTitle>
+                  <Button
+                    size="sm"
+                    onClick={() => setInviteStudentDialogOpen(true)}
+                  >
+                    <Plus className="size-4" />
+                    Invite / Add Student
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -245,10 +318,13 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                         <TableHead>Progress</TableHead>
                         <TableHead className="text-right">Answers</TableHead>
                         <TableHead>Last practice</TableHead>
+                        <TableHead className="w-12 text-right">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {classDetails.studentsList.map((student) => (
+                      {students.map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
                             <div className="font-medium">{student.name}</div>
@@ -278,6 +354,14 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {student.lastPracticedAt}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <StudentActionsMenu
+                              student={student}
+                              onViewProgress={setProgressDialogStudent}
+                              onEdit={setEditStudentDialogStudent}
+                              onRemove={setRemoveStudentDialogStudent}
+                            />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -341,6 +425,40 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
         onOpenChange={setAssignDialogOpen}
         availableWordSets={availableWordSets}
         onAssign={handleAssignWordSet}
+      />
+      <InviteStudentDialog
+        open={inviteStudentDialogOpen}
+        onOpenChange={setInviteStudentDialogOpen}
+        inviteCode={classDetails.inviteCode}
+        onAddStudent={handleAddStudent}
+      />
+      <StudentProgressDialog
+        student={progressDialogStudent}
+        className={classOverview.name}
+        weakWords={classDetails.problemWords}
+        onOpenChange={(open) => {
+          if (!open) {
+            setProgressDialogStudent(null);
+          }
+        }}
+      />
+      <EditStudentDialog
+        student={editStudentDialogStudent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditStudentDialogStudent(null);
+          }
+        }}
+        onSave={handleUpdateStudent}
+      />
+      <RemoveStudentDialog
+        student={removeStudentDialogStudent}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRemoveStudentDialogStudent(null);
+          }
+        }}
+        onRemove={handleRemoveStudent}
       />
       <EditClassDialog
         open={editDialogOpen}
@@ -438,6 +556,386 @@ function ProblemWordsCard({
   );
 }
 
+interface StudentActionsMenuProps {
+  student: MockStudent;
+  onViewProgress: (student: MockStudent) => void;
+  onEdit: (student: MockStudent) => void;
+  onRemove: (student: MockStudent) => void;
+}
+
+function StudentActionsMenu({
+  student,
+  onViewProgress,
+  onEdit,
+  onRemove,
+}: StudentActionsMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="Student actions">
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onViewProgress(student)}
+        >
+          <Eye className="size-4" />
+          View progress
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onEdit(student)}
+        >
+          <Pencil className="size-4" />
+          Edit student
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          variant="destructive"
+          onClick={() => onRemove(student)}
+        >
+          <Trash2 className="size-4" />
+          Remove from class
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+interface NewStudentInput {
+  email: string;
+  name: string;
+}
+
+interface InviteStudentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  inviteCode: string;
+  onAddStudent: (student: NewStudentInput) => void;
+}
+
+function InviteStudentDialog({
+  open,
+  onOpenChange,
+  inviteCode,
+  onAddStudent,
+}: InviteStudentDialogProps) {
+  const [copied, setCopied] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+
+  const handleCopyInviteCode = async () => {
+    await navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!email.trim()) {
+      return;
+    }
+
+    onAddStudent({
+      email: email.trim(),
+      name: name.trim(),
+    });
+    setEmail("");
+    setName("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Invite or Add Student</DialogTitle>
+            <DialogDescription>
+              Share the invite code or add a student directly by email.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <div className="text-sm text-muted-foreground">Invite code</div>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="rounded-md border bg-background px-3 py-2 font-mono text-lg font-semibold tracking-wide">
+                  {inviteCode}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCopyInviteCode}
+                >
+                  {copied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  {copied ? "Copied" : "Copy invite code"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs uppercase text-muted-foreground">
+              <div className="h-px flex-1 bg-border" />
+              or
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            <Field>
+              <FieldLabel htmlFor="student-email">Student email</FieldLabel>
+              <Input
+                id="student-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="student@example.com"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="student-name">Student name</FieldLabel>
+              <Input
+                id="student-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Optional"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!email.trim()}>
+              Add Student
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface StudentProgressDialogProps {
+  student: MockStudent | null;
+  className: string;
+  weakWords: MockClassDetails["problemWords"];
+  onOpenChange: (open: boolean) => void;
+}
+
+function StudentProgressDialog({
+  student,
+  className,
+  weakWords,
+  onOpenChange,
+}: StudentProgressDialogProps) {
+  return (
+    <Dialog open={Boolean(student)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{student?.name ?? "Student progress"}</DialogTitle>
+          <DialogDescription>{className}</DialogDescription>
+        </DialogHeader>
+
+        {student && (
+          <div className="grid gap-4">
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">{student.progress}%</span>
+              </div>
+              <Progress value={student.progress} className="mt-3 h-2" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <SummaryMetric
+                icon={Check}
+                label="Correct"
+                value={student.correctAnswers}
+              />
+              <SummaryMetric
+                icon={TrendingDown}
+                label="Wrong"
+                value={student.wrongAnswers}
+              />
+              <SummaryMetric
+                icon={BookText}
+                label="Weak words"
+                value={weakWords.length}
+              />
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="text-sm font-medium">Weak words</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {weakWords.map((word) => (
+                  <Badge key={word.id} variant="outline">
+                    {word.term}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div className="text-sm text-muted-foreground">
+              Last practice:{" "}
+              <span className="font-medium text-foreground">
+                {student.lastPracticedAt}
+              </span>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface StudentProfileInput {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface EditStudentDialogProps {
+  student: MockStudent | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (student: StudentProfileInput) => void;
+}
+
+function EditStudentDialog({
+  student,
+  onOpenChange,
+  onSave,
+}: EditStudentDialogProps) {
+  const [name, setName] = useState(student?.name ?? "");
+  const [email, setEmail] = useState(student?.email ?? "");
+
+  useEffect(() => {
+    if (!student) {
+      return;
+    }
+
+    setName(student.name);
+    setEmail(student.email);
+  }, [student]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && student) {
+      setName(student.name);
+      setEmail(student.email);
+    }
+
+    onOpenChange(open);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!student || !name.trim() || !email.trim()) {
+      return;
+    }
+
+    onSave({
+      id: student.id,
+      name: name.trim(),
+      email: email.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={Boolean(student)} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>Update student profile details.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="edit-student-name">Name</FieldLabel>
+              <Input
+                id="edit-student-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Student name"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-student-email">Email</FieldLabel>
+              <Input
+                id="edit-student-email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="student@example.com"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!name.trim() || !email.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface RemoveStudentDialogProps {
+  student: MockStudent | null;
+  onOpenChange: (open: boolean) => void;
+  onRemove: () => void;
+}
+
+function RemoveStudentDialog({
+  student,
+  onOpenChange,
+  onRemove,
+}: RemoveStudentDialogProps) {
+  return (
+    <AlertDialog open={Boolean(student)} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove student from this class?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {student?.name} will be removed from this class in the local mock
+            view.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onRemove}
+          >
+            Remove
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 interface ClassOverviewInput {
   name: string;
   description: string;
@@ -460,6 +958,16 @@ function EditClassDialog({
   const [name, setName] = useState(initialValue.name);
   const [description, setDescription] = useState(initialValue.description);
   const [level, setLevel] = useState(initialValue.level);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setName(initialValue.name);
+    setDescription(initialValue.description);
+    setLevel(initialValue.level);
+  }, [initialValue.description, initialValue.level, initialValue.name, open]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
+  Eye,
   ListChecks,
+  MoreHorizontal,
   Pencil,
   Plus,
   Target,
@@ -34,6 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -72,6 +81,12 @@ export function WordSetDetailsPage({
   const [addWordDialogOpen, setAddWordDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [viewWordDialogWord, setViewWordDialogWord] =
+    useState<MockWord | null>(null);
+  const [editWordDialogWord, setEditWordDialogWord] =
+    useState<MockWord | null>(null);
+  const [deleteWordDialogWord, setDeleteWordDialogWord] =
+    useState<MockWord | null>(null);
   const [wordSetOverview, setWordSetOverview] = useState({
     title: wordSet.title,
     description: wordSet.description,
@@ -111,6 +126,33 @@ export function WordSetDetailsPage({
         wrongAnswers: 0,
       },
     ]);
+  };
+
+  const handleUpdateWord = (updatedWord: WordInput) => {
+    setWords((currentWords) =>
+      currentWords.map((word) =>
+        word.id === updatedWord.id
+          ? {
+              ...word,
+              term: updatedWord.term,
+              translation: updatedWord.translation,
+              exampleSentence: updatedWord.exampleSentence,
+            }
+          : word,
+      ),
+    );
+    setEditWordDialogWord(null);
+  };
+
+  const handleDeleteWord = () => {
+    if (!deleteWordDialogWord) {
+      return;
+    }
+
+    setWords((currentWords) =>
+      currentWords.filter((word) => word.id !== deleteWordDialogWord.id),
+    );
+    setDeleteWordDialogWord(null);
   };
 
   const handleUpdateWordSetOverview = (overview: WordSetOverviewInput) => {
@@ -245,6 +287,9 @@ export function WordSetDetailsPage({
                       <TableHead>Example</TableHead>
                       <TableHead>Mastery</TableHead>
                       <TableHead className="text-right">Answers</TableHead>
+                      <TableHead className="w-12 text-right">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -279,6 +324,14 @@ export function WordSetDetailsPage({
                             / {word.wrongAnswers} wrong
                           </span>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <WordActionsMenu
+                            word={word}
+                            onView={setViewWordDialogWord}
+                            onEdit={setEditWordDialogWord}
+                            onDelete={setDeleteWordDialogWord}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -300,6 +353,32 @@ export function WordSetDetailsPage({
         open={addWordDialogOpen}
         onOpenChange={setAddWordDialogOpen}
         onAddWord={handleAddWord}
+      />
+      <ViewWordDialog
+        word={viewWordDialogWord}
+        onOpenChange={(open) => {
+          if (!open) {
+            setViewWordDialogWord(null);
+          }
+        }}
+      />
+      <EditWordDialog
+        word={editWordDialogWord}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditWordDialogWord(null);
+          }
+        }}
+        onSave={handleUpdateWord}
+      />
+      <DeleteWordDialog
+        word={deleteWordDialogWord}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteWordDialogWord(null);
+          }
+        }}
+        onDelete={handleDeleteWord}
       />
       <EditWordSetDialog
         open={editDialogOpen}
@@ -335,10 +414,63 @@ function SummaryMetric({ icon: Icon, label, value }: SummaryMetricProps) {
   );
 }
 
+interface WordActionsMenuProps {
+  word: MockWord;
+  onView: (word: MockWord) => void;
+  onEdit: (word: MockWord) => void;
+  onDelete: (word: MockWord) => void;
+}
+
+function WordActionsMenu({
+  word,
+  onView,
+  onEdit,
+  onDelete,
+}: WordActionsMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon-sm" aria-label="Word actions">
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onView(word)}
+        >
+          <Eye className="size-4" />
+          View word
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => onEdit(word)}
+        >
+          <Pencil className="size-4" />
+          Edit word
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          variant="destructive"
+          onClick={() => onDelete(word)}
+        >
+          <Trash2 className="size-4" />
+          Delete word
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 interface NewWordInput {
   term: string;
   translation: string;
   exampleSentence: string;
+}
+
+interface WordInput extends NewWordInput {
+  id: string;
 }
 
 interface WordSetOverviewInput {
@@ -513,6 +645,219 @@ function AddWordDialog({
   );
 }
 
+interface ViewWordDialogProps {
+  word: MockWord | null;
+  onOpenChange: (open: boolean) => void;
+}
+
+function ViewWordDialog({ word, onOpenChange }: ViewWordDialogProps) {
+  return (
+    <Dialog open={Boolean(word)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{word?.term ?? "Word details"}</DialogTitle>
+          <DialogDescription>Word performance and example usage.</DialogDescription>
+        </DialogHeader>
+
+        {word && (
+          <div className="grid gap-4">
+            <div className="grid gap-3 rounded-lg border p-4">
+              <div>
+                <div className="text-sm text-muted-foreground">Term</div>
+                <div className="mt-1 font-medium">{word.term}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">
+                  Translation
+                </div>
+                <div className="mt-1 font-medium">{word.translation}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">
+                  Example sentence
+                </div>
+                <div className="mt-1 text-sm">{word.exampleSentence}</div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Mastery</span>
+                <span className="font-medium">{word.masteryLevel}%</span>
+              </div>
+              <Progress value={word.masteryLevel} className="mt-3 h-2" />
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SummaryMetric
+                icon={Target}
+                label="Correct answers"
+                value={word.correctAnswers}
+              />
+              <SummaryMetric
+                icon={Trash2}
+                label="Wrong answers"
+                value={word.wrongAnswers}
+              />
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditWordDialogProps {
+  word: MockWord | null;
+  onOpenChange: (open: boolean) => void;
+  onSave: (word: WordInput) => void;
+}
+
+function EditWordDialog({
+  word,
+  onOpenChange,
+  onSave,
+}: EditWordDialogProps) {
+  const [term, setTerm] = useState(word?.term ?? "");
+  const [translation, setTranslation] = useState(word?.translation ?? "");
+  const [exampleSentence, setExampleSentence] = useState(
+    word?.exampleSentence ?? "",
+  );
+
+  useEffect(() => {
+    if (!word) {
+      return;
+    }
+
+    setTerm(word.term);
+    setTranslation(word.translation);
+    setExampleSentence(word.exampleSentence);
+  }, [word]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && word) {
+      setTerm(word.term);
+      setTranslation(word.translation);
+      setExampleSentence(word.exampleSentence);
+    }
+
+    onOpenChange(open);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!word || !term.trim() || !translation.trim()) {
+      return;
+    }
+
+    onSave({
+      id: word.id,
+      term: term.trim(),
+      translation: translation.trim(),
+      exampleSentence: exampleSentence.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={Boolean(word)} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Word</DialogTitle>
+            <DialogDescription>
+              Update the term, translation, and example sentence.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="edit-word-term">Term</FieldLabel>
+              <Input
+                id="edit-word-term"
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
+                placeholder="e.g., appointment"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-word-translation">
+                Translation
+              </FieldLabel>
+              <Input
+                id="edit-word-translation"
+                value={translation}
+                onChange={(event) => setTranslation(event.target.value)}
+                placeholder="e.g., scheduled meeting"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="edit-word-example">
+                Example sentence
+              </FieldLabel>
+              <Textarea
+                id="edit-word-example"
+                value={exampleSentence}
+                onChange={(event) => setExampleSentence(event.target.value)}
+                placeholder="Use the word in a short sentence."
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!term.trim() || !translation.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteWordDialogProps {
+  word: MockWord | null;
+  onOpenChange: (open: boolean) => void;
+  onDelete: () => void;
+}
+
+function DeleteWordDialog({
+  word,
+  onOpenChange,
+  onDelete,
+}: DeleteWordDialogProps) {
+  return (
+    <AlertDialog open={Boolean(word)} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this word?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {word?.term} will be removed from this word set in the local mock
+            view.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onDelete}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 interface EditWordSetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -529,6 +874,16 @@ function EditWordSetDialog({
   const [title, setTitle] = useState(initialValue.title);
   const [description, setDescription] = useState(initialValue.description);
   const [tag, setTag] = useState(initialValue.tag);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setTitle(initialValue.title);
+    setDescription(initialValue.description);
+    setTag(initialValue.tag);
+  }, [initialValue.description, initialValue.tag, initialValue.title, open]);
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {

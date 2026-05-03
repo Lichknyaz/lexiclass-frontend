@@ -23,10 +23,7 @@ import {
   mockClasses,
   mockWordSetSummaries,
 } from "@/mock/mock-data";
-import {
-  type MockProblemWord,
-  type MockStudent,
-} from "@/types/mock";
+import { type MockProblemWord, type MockStudent } from "@/types/mock";
 import { getAverage, getMistakeRate } from "@/utils";
 
 export function TeacherDashboard() {
@@ -102,46 +99,18 @@ export function TeacherDashboard() {
                 </CardContent>
               </Card>
 
-              <div className="xl:col-span-3">
+              <div className="xl:col-span-4">
                 <StudentsPreview
                   title="Top Performing Students"
                   students={topStudents}
                 />
               </div>
-              <div className="xl:col-span-3">
+              <div className="xl:col-span-4">
                 <StudentsPreview
                   title="Lowest Progress"
                   students={lowestStudents}
                 />
               </div>
-
-              <Card className="h-fit self-start xl:col-span-2">
-                <CardHeader className="pb-2">
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-1.5 px-3 pb-3">
-                  <Button size="sm" onClick={() => setDialogOpen(true)}>
-                    <Plus className="size-4" />
-                    Create Class
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => router.push("/teacher/word-sets")}
-                  >
-                    <ListChecks className="size-4" />
-                    Create Word Set
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => router.push("/teacher/word-sets")}
-                  >
-                    <UserRoundCheck className="size-4" />
-                    Assign Word Set
-                  </Button>
-                </CardContent>
-              </Card>
             </section>
           </div>
         </main>
