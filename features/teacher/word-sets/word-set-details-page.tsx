@@ -2,14 +2,27 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
   ListChecks,
+  Pencil,
   Plus,
   Target,
+  Trash2,
   Users,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +49,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { mockClasses } from "@/mock/mock-data";
-import type { MockClassSummary, MockWord, MockWordSetDetails } from "@/types/mock";
+import type {
+  MockClassSummary,
+  MockWord,
+  MockWordSetDetails,
+} from "@/types/mock";
 import { getAverage } from "@/utils";
 
 interface WordSetDetailsPageProps {
@@ -50,8 +67,16 @@ export function WordSetDetailsPage({
   backHref,
   backLabel,
 }: WordSetDetailsPageProps) {
+  const router = useRouter();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [addWordDialogOpen, setAddWordDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [wordSetOverview, setWordSetOverview] = useState({
+    title: wordSet.title,
+    description: wordSet.description,
+    tag: wordSet.className,
+  });
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
   const [assignedClasses, setAssignedClasses] = useState<MockClassSummary[]>(
     mockClasses.filter((classItem) => classItem.id === wordSet.classId),
@@ -88,6 +113,16 @@ export function WordSetDetailsPage({
     ]);
   };
 
+  const handleUpdateWordSetOverview = (overview: WordSetOverviewInput) => {
+    setWordSetOverview(overview);
+    setEditDialogOpen(false);
+  };
+
+  const handleDeleteWordSet = () => {
+    setDeleteDialogOpen(false);
+    router.push("/teacher/word-sets");
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar className="hidden lg:flex" />
@@ -102,7 +137,9 @@ export function WordSetDetailsPage({
                 <span className="sr-only">{backLabel}</span>
               </Link>
             </Button>
-            <h1 className="truncate text-xl font-semibold">{wordSet.title}</h1>
+            <h1 className="truncate text-xl font-semibold">
+              {wordSetOverview.title}
+            </h1>
           </div>
           <Button onClick={() => setAssignDialogOpen(true)}>
             <Plus className="size-4" />
@@ -118,13 +155,32 @@ export function WordSetDetailsPage({
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <CardTitle className="text-2xl">
-                        {wordSet.title}
+                        {wordSetOverview.title}
                       </CardTitle>
                       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                        {wordSet.description}
+                        {wordSetOverview.description}
                       </p>
                     </div>
-                    <Badge variant="secondary">{wordSet.className}</Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Badge variant="secondary">{wordSetOverview.tag}</Badge>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={() => setEditDialogOpen(true)}
+                        aria-label="Edit word set"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        aria-label="Delete word set"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-3">
@@ -245,6 +301,18 @@ export function WordSetDetailsPage({
         onOpenChange={setAddWordDialogOpen}
         onAddWord={handleAddWord}
       />
+      <EditWordSetDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        initialValue={wordSetOverview}
+        onSave={handleUpdateWordSetOverview}
+      />
+      <DeleteWordSetDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        wordSetTitle={wordSetOverview.title}
+        onDelete={handleDeleteWordSet}
+      />
     </div>
   );
 }
@@ -271,6 +339,12 @@ interface NewWordInput {
   term: string;
   translation: string;
   exampleSentence: string;
+}
+
+interface WordSetOverviewInput {
+  title: string;
+  description: string;
+  tag: string;
 }
 
 interface AssignClassDialogProps {
@@ -436,5 +510,148 @@ function AddWordDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface EditWordSetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initialValue: WordSetOverviewInput;
+  onSave: (overview: WordSetOverviewInput) => void;
+}
+
+function EditWordSetDialog({
+  open,
+  onOpenChange,
+  initialValue,
+  onSave,
+}: EditWordSetDialogProps) {
+  const [title, setTitle] = useState(initialValue.title);
+  const [description, setDescription] = useState(initialValue.description);
+  const [tag, setTag] = useState(initialValue.tag);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setTitle(initialValue.title);
+      setDescription(initialValue.description);
+      setTag(initialValue.tag);
+    }
+
+    onOpenChange(nextOpen);
+  };
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!title.trim() || !description.trim() || !tag.trim()) {
+      return;
+    }
+
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      tag: tag.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Edit Word Set</DialogTitle>
+            <DialogDescription>
+              Update the word set title, description, and tag.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-6">
+            <Field>
+              <FieldLabel htmlFor="word-set-title">Title</FieldLabel>
+              <Input
+                id="word-set-title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="e.g., Daily routines"
+                autoFocus
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="word-set-description">
+                Description
+              </FieldLabel>
+              <Textarea
+                id="word-set-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Describe this word set"
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="word-set-tag">Tag</FieldLabel>
+              <Input
+                id="word-set-tag"
+                value={tag}
+                onChange={(event) => setTag(event.target.value)}
+                placeholder="e.g., English A2"
+              />
+            </Field>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!title.trim() || !description.trim() || !tag.trim()}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteWordSetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  wordSetTitle: string;
+  onDelete: () => void;
+}
+
+function DeleteWordSetDialog({
+  open,
+  onOpenChange,
+  wordSetTitle,
+  onDelete,
+}: DeleteWordSetDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete word set?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will remove {wordSetTitle} from the local mock view. This
+            action cannot be undone in this session.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={onDelete}
+          >
+            Delete Word Set
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
