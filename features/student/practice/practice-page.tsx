@@ -101,6 +101,19 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     resetQuestionState();
   };
 
+  const startWeakWordsSession = () => {
+    const weakWords = getWordsByScope(allWords, "weak");
+
+    setWordScope("weak");
+    setSessionWords(weakWords.length > 0 ? weakWords : allWords);
+    setStarted(true);
+    setCurrentIndex(0);
+    setCorrectCount(0);
+    setWrongCount(0);
+    setCompleted(false);
+    resetQuestionState();
+  };
+
   const exitSession = () => {
     setStarted(false);
     resetSession();
@@ -239,8 +252,8 @@ export function PracticePage({ wordSet }: PracticePageProps) {
           <ResultCard
             correctCount={correctCount}
             wrongCount={wrongCount}
-            totalWords={words.length}
-            onRestart={startSession}
+            words={words}
+            onPracticeWeakWords={startWeakWordsSession}
           />
         ) : (
           currentWord && (
@@ -570,41 +583,95 @@ function AnswerFeedback({
 interface ResultCardProps {
   correctCount: number;
   wrongCount: number;
-  totalWords: number;
-  onRestart: () => void;
+  words: MockWord[];
+  onPracticeWeakWords: () => void;
 }
 
 function ResultCard({
   correctCount,
   wrongCount,
-  totalWords,
-  onRestart,
+  words,
+  onPracticeWeakWords,
 }: ResultCardProps) {
+  const totalWords = words.length;
   const score = getPercentage(correctCount, totalWords);
+  const weakWords = words.filter((word) => word.masteryLevel < 60);
 
   return (
     <Card>
-      <CardContent className="flex min-h-80 flex-col items-center justify-center p-8 text-center">
-        <div className="text-sm font-medium text-muted-foreground">
-          Final result
+      <CardContent className="flex min-h-80 flex-col gap-6 p-8">
+        <div className="text-center">
+          <div className="text-sm font-medium text-muted-foreground">
+            Session complete
+          </div>
+          <div className="mt-3 text-5xl font-semibold">{score}%</div>
+          <div className="mt-2 text-sm text-muted-foreground">accuracy</div>
         </div>
-        <div className="mt-3 text-5xl font-semibold">{score}%</div>
-        <div className="mt-4 flex gap-6 text-sm text-muted-foreground">
-          <span>
-            Correct:{" "}
-            <span className="font-medium text-foreground">{correctCount}</span>
-          </span>
-          <span>
-            Wrong:{" "}
-            <span className="font-medium text-destructive">{wrongCount}</span>
-          </span>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <ResultMetric label="Correct" value={correctCount} />
+          <ResultMetric label="Wrong" value={wrongCount} destructive />
+          <ResultMetric label="Accuracy" value={`${score}%`} />
         </div>
-        <Button className="mt-8" onClick={onRestart}>
-          <RotateCcw className="size-4" />
-          Practice Again
-        </Button>
+
+        <div className="rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="font-medium">Weak words</div>
+            <div className="text-sm text-muted-foreground">
+              {weakWords.length}
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {weakWords.length === 0 ? (
+              <span className="text-sm text-muted-foreground">
+                No weak words in this session.
+              </span>
+            ) : (
+              weakWords.map((word) => (
+                <Badge key={word.id} variant="outline">
+                  {word.term}
+                </Badge>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button onClick={onPracticeWeakWords} disabled={weakWords.length === 0}>
+            <RotateCcw className="size-4" />
+            Practice weak words
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/student/dashboard">Back to dashboard</Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+function ResultMetric({
+  label,
+  value,
+  destructive = false,
+}: {
+  label: string;
+  value: number | string;
+  destructive?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border p-4 text-center">
+      <div className="text-sm text-muted-foreground">{label}</div>
+      <div
+        className={
+          destructive
+            ? "mt-1 text-2xl font-semibold text-destructive"
+            : "mt-1 text-2xl font-semibold"
+        }
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
