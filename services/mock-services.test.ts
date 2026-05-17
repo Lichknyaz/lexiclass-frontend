@@ -154,22 +154,66 @@ describe("mock domain services", () => {
   });
 
   it("returns a practice result with per-word attempts", async () => {
+    practiceService.clearPracticeAttempts();
+
     const result = await practiceService.savePracticeSession({
       assignmentId: "1-w1",
       studentId: "student-1",
       mode: "writing",
       attempts: [
-        { wordId: "word-1", correct: true },
-        { wordId: "word-2", correct: false },
+        { wordId: "word-1", status: "correct", answeredAt: "2026-05-17T10:00:00.000Z" },
+        { wordId: "word-2", status: "wrong", answeredAt: "2026-05-17T10:01:00.000Z" },
       ],
     });
+    const storedAttempts = await practiceService.listPracticeAttempts();
 
     assert.equal(result.correctAnswers, 1);
     assert.equal(result.wrongAnswers, 1);
     assert.equal(result.wordResults.length, 2);
+    assert.equal(storedAttempts.length, 2);
+    assert.deepEqual(storedAttempts.map((attempt) => attempt.status), [
+      "correct",
+      "wrong",
+    ]);
+    assert.equal(storedAttempts[0].mode, "writing");
+    assert.equal(storedAttempts[0].assignmentId, "1-w1");
+    assert.equal(storedAttempts[0].studentId, "student-1");
+    assert.equal(storedAttempts[0].answeredAt, "2026-05-17T10:00:00.000Z");
+  });
+
+  it("derives problem-word analytics from saved practice attempts", async () => {
+    practiceService.clearPracticeAttempts();
+
+    await practiceService.savePracticeSession({
+      assignmentId: "1-w1",
+      studentId: "student-1",
+      mode: "multiple-choice",
+      attempts: [
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:00:00.000Z" },
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:01:00.000Z" },
+        { wordId: "word-2", status: "correct", answeredAt: "2026-05-17T10:02:00.000Z" },
+      ],
+    });
+    await practiceService.savePracticeSession({
+      assignmentId: "1-w1",
+      studentId: "student-2",
+      mode: "writing",
+      attempts: [
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:03:00.000Z" },
+      ],
+    });
+
+    const analytics = await analyticsService.getTeacherAnalytics();
+
+    assert.equal(analytics.problemWords[0].id, "word-1");
+    assert.equal(analytics.problemWords[0].wrongAnswers, 3);
+    assert.equal(analytics.problemWords[0].correctAnswers, 0);
+    assert.equal(analytics.problemWords[0].affectedStudents, 2);
   });
 
   it("aggregates teacher analytics from mock data", async () => {
+    practiceService.clearPracticeAttempts();
+
     const analytics = await analyticsService.getTeacherAnalytics();
 
     assert.ok(analytics.totalStudents > 0);

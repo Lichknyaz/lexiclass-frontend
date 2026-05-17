@@ -7,6 +7,7 @@ import {
   mockClasses,
   mockStudentClasses,
   mockStudentProgressWords,
+  mockWordSetDetails,
   mockWordSetSummaries,
 } from "../mock/mock-data.ts";
 import type {
@@ -66,7 +67,9 @@ export interface WordProfileInput extends WordInput {
 
 export interface PracticeAttemptInput {
   wordId: string;
-  correct: boolean;
+  status?: "correct" | "wrong";
+  correct?: boolean;
+  answeredAt?: string;
 }
 
 export interface SavePracticeSessionInput {
@@ -80,6 +83,16 @@ export interface PracticeWordResult {
   wordId: string;
   correctAnswers: number;
   wrongAnswers: number;
+}
+
+export interface StoredPracticeAttempt {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  wordId: string;
+  status: "correct" | "wrong";
+  mode: SavePracticeSessionInput["mode"];
+  answeredAt: string;
 }
 
 export interface PracticeSessionResult {
@@ -98,6 +111,9 @@ export interface TeacherAnalytics {
   classProgress: MockClassDetails[];
   problemWords: MockProblemWord[];
 }
+
+let practiceAttemptSequence = 0;
+const practiceAttempts: StoredPracticeAttempt[] = [];
 
 export const classesService = {
   async listClasses(): Promise<MockClassSummary[]> {
@@ -372,11 +388,26 @@ export const practiceService = {
   async savePracticeSession(
     input: SavePracticeSessionInput,
   ): Promise<PracticeSessionResult> {
-    const wordResults = input.attempts.map((attempt) => ({
+    const storedAttempts = input.attempts.map((attempt) => {
+      const status = normalizeAttemptStatus(attempt);
+
+      return {
+        id: `practice-attempt-${++practiceAttemptSequence}`,
+        assignmentId: input.assignmentId,
+        studentId: input.studentId,
+        wordId: attempt.wordId,
+        status,
+        mode: input.mode,
+        answeredAt: attempt.answeredAt ?? new Date().toISOString(),
+      };
+    });
+    const wordResults = storedAttempts.map((attempt) => ({
       wordId: attempt.wordId,
-      correctAnswers: attempt.correct ? 1 : 0,
-      wrongAnswers: attempt.correct ? 0 : 1,
+      correctAnswers: attempt.status === "correct" ? 1 : 0,
+      wrongAnswers: attempt.status === "wrong" ? 1 : 0,
     }));
+
+    practiceAttempts.push(...storedAttempts);
 
     return {
       assignmentId: input.assignmentId,
@@ -393,11 +424,23 @@ export const practiceService = {
       wordResults,
     };
   },
+
+  async listPracticeAttempts(): Promise<StoredPracticeAttempt[]> {
+    return clone(practiceAttempts);
+  },
+
+  clearPracticeAttempts() {
+    practiceAttempts.length = 0;
+    practiceAttemptSequence = 0;
+  },
 };
 
 export const analyticsService = {
   async getTeacherAnalytics(): Promise<TeacherAnalytics> {
-    const problemWords = aggregateProblemWords(mockClassDetails);
+    const problemWords =
+      practiceAttempts.length > 0
+        ? aggregateProblemWordsFromAttempts(practiceAttempts)
+        : aggregateProblemWords(mockClassDetails);
 
     return {
       totalStudents: mockClassDetails.reduce(
@@ -416,6 +459,75 @@ export const analyticsService = {
     };
   },
 };
+
+function normalizeAttemptStatus(
+  attempt: PracticeAttemptInput,
+): StoredPracticeAttempt["status"] {
+  if (attempt.status) {
+    return attempt.status;
+  }
+
+  return attempt.correct ? "correct" : "wrong";
+}
+
+function aggregateProblemWordsFromAttempts(attempts: StoredPracticeAttempt[]) {
+  const wordsById = new Map<
+    string,
+    MockProblemWord & { studentIds: Set<string> }
+  >();
+
+  for (const attempt of attempts) {
+    const word = getMockWord(attempt.wordId);
+
+    if (!word) {
+      continue;
+    }
+
+    const existing = wordsById.get(attempt.wordId) ?? {
+      id: word.id,
+      term: word.term,
+      translation: word.translation,
+      wrongAnswers: 0,
+      correctAnswers: 0,
+      affectedStudents: 0,
+      studentIds: new Set<string>(),
+    };
+
+    if (attempt.status === "correct") {
+      existing.correctAnswers += 1;
+    } else {
+      existing.wrongAnswers += 1;
+      existing.studentIds.add(attempt.studentId);
+    }
+
+    existing.affectedStudents = existing.studentIds.size;
+    wordsById.set(attempt.wordId, existing);
+  }
+
+  return [...wordsById.values()]
+    .filter((word) => word.wrongAnswers > 0)
+    .map((word) => ({
+      id: word.id,
+      term: word.term,
+      translation: word.translation,
+      wrongAnswers: word.wrongAnswers,
+      correctAnswers: word.correctAnswers,
+      affectedStudents: word.affectedStudents,
+    }))
+    .sort((a, b) => getMistakeRate(b) - getMistakeRate(a));
+}
+
+function getMockWord(wordId: string) {
+  for (const wordSet of mockWordSetDetails) {
+    const word = wordSet.wordsList.find((item) => item.id === wordId);
+
+    if (word) {
+      return word;
+    }
+  }
+
+  return undefined;
+}
 
 function aggregateProblemWords(classDetails: MockClassDetails[]) {
   const wordsByTerm = new Map<string, MockProblemWord>();

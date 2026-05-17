@@ -27,5 +27,6 @@ export {
   type PracticeSessionResult,
   type PracticeWordResult,
   type SavePracticeSessionInput,
+  type StoredPracticeAttempt,
   type TeacherAnalytics,
 } from "./mock-services";
