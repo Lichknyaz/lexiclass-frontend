@@ -14,19 +14,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentShell } from "@/components/student/student-shell";
-import { getMockWordSetDetails } from "@/mock/mock-data";
-import type { MockStudentWordSet } from "@/types/mock";
+import type { MockStudentWordSet, MockWord } from "@/types/mock";
 
 interface StudentWordSetDetailsPageProps {
   wordSet: MockStudentWordSet;
+  words: MockWord[];
 }
 
 export function StudentWordSetDetailsPage({
   wordSet,
+  words,
 }: StudentWordSetDetailsPageProps) {
-  const teacherWordSet =
-    getMockWordSetDetails(wordSet.id) ?? getMockWordSetDetails("w1");
-  const words = teacherWordSet?.wordsList ?? [];
   const weakWords = words.filter((word) => word.masteryLevel < 60);
 
   return (

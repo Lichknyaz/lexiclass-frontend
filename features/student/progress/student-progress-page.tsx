@@ -15,7 +15,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StudentShell } from "@/components/student/student-shell";
-import { mockStudentProgressWords } from "@/mock/mock-data";
 import type { MockStudentProgressWord } from "@/types/mock";
 import { getAverage } from "@/utils";
 
@@ -30,24 +29,28 @@ const progressWordFilterOptions: Array<{
   { label: "Learned", value: "learned" },
 ];
 
-export function StudentProgressPage() {
+interface StudentProgressPageProps {
+  progressWords: MockStudentProgressWord[];
+}
+
+export function StudentProgressPage({ progressWords }: StudentProgressPageProps) {
   const [wordFilter, setWordFilter] = useState<ProgressWordFilter>("all");
-  const totalWordsPracticed = mockStudentProgressWords.length;
-  const correctAnswers = mockStudentProgressWords.reduce(
+  const totalWordsPracticed = progressWords.length;
+  const correctAnswers = progressWords.reduce(
     (total, word) => total + word.correctCount,
     0,
   );
-  const wrongAnswers = mockStudentProgressWords.reduce(
+  const wrongAnswers = progressWords.reduce(
     (total, word) => total + word.wrongCount,
     0,
   );
   const progress = getAverage(
-    mockStudentProgressWords.map((word) => word.masteryLevel),
+    progressWords.map((word) => word.masteryLevel),
   );
-  const weakWords = mockStudentProgressWords.filter(
+  const weakWords = progressWords.filter(
     (word) => word.masteryLevel < 60,
   );
-  const filteredWords = mockStudentProgressWords.filter((word) =>
+  const filteredWords = progressWords.filter((word) =>
     matchesProgressWordFilter(word, wordFilter),
   );
 

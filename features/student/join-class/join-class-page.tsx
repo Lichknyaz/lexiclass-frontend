@@ -9,13 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { StudentShell } from "@/components/student/student-shell";
+import { studentService } from "@/services";
 
 export function JoinClassPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [joinedClassName, setJoinedClassName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     const normalizedCode = inviteCode.trim().toUpperCase();
@@ -24,14 +25,15 @@ export function JoinClassPage() {
       return;
     }
 
-    if (normalizedCode !== "A2-7KQ9") {
+    try {
+      const joinedClass = await studentService.joinClass(normalizedCode);
+
+      setErrorMessage("");
+      setJoinedClassName(joinedClass.name);
+    } catch {
       setJoinedClassName("");
       setErrorMessage("Invalid invite code. Check the code and try again.");
-      return;
     }
-
-    setErrorMessage("");
-    setJoinedClassName("English A2");
   };
 
   return (
