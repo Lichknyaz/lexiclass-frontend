@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { getErrorMessage } from "@/utils";
 
 interface CreateClassDialogProps {
   open: boolean;
@@ -25,13 +26,24 @@ export function CreateClassDialog({
   onCreate,
 }: CreateClassDialogProps) {
   const [className, setClassName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (className.trim()) {
-      await onCreate(className.trim());
-      setClassName("");
-      onOpenChange(false);
+      setIsSubmitting(true);
+      setErrorMessage("");
+
+      try {
+        await onCreate(className.trim());
+        setClassName("");
+        onOpenChange(false);
+      } catch (error) {
+        setErrorMessage(getErrorMessage(error, "Could not create class"));
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -47,16 +59,23 @@ export function CreateClassDialog({
           </DialogHeader>
 
           <div className="py-6">
-            <Field>
-              <FieldLabel htmlFor="class-name">Class Name</FieldLabel>
-              <Input
-                id="class-name"
-                placeholder="e.g., English B2"
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                autoFocus
-              />
-            </Field>
+            <div className="grid gap-3">
+              {errorMessage && (
+                <div className="rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                  {errorMessage}
+                </div>
+              )}
+              <Field>
+                <FieldLabel htmlFor="class-name">Class Name</FieldLabel>
+                <Input
+                  id="class-name"
+                  placeholder="e.g., English B2"
+                  value={className}
+                  onChange={(e) => setClassName(e.target.value)}
+                  autoFocus
+                />
+              </Field>
+            </div>
           </div>
 
           <DialogFooter>
@@ -67,8 +86,8 @@ export function CreateClassDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={!className.trim()}>
-              Create Class
+            <Button type="submit" disabled={!className.trim() || isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Class"}
             </Button>
           </DialogFooter>
         </form>

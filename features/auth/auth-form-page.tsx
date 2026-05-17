@@ -3,14 +3,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpenCheck, GraduationCap, UserRoundCheck } from "lucide-react";
+import {
+  AlertCircle,
+  BookOpenCheck,
+  GraduationCap,
+  UserRoundCheck,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { getRoleHome, type UserRole } from "@/features/auth/auth-session";
 import { authService } from "@/services";
-import { cn } from "@/utils";
+import { cn, getErrorMessage } from "@/utils";
 
 type AuthMode = "login" | "register";
 
@@ -25,6 +31,8 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("teacher");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     void authService.getCurrentUser().then((user) => {
@@ -41,20 +49,29 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
       return;
     }
 
-    const user = isRegister
-      ? await authService.register({
-          name,
-          email,
-          password,
-          role,
-        })
-      : await authService.login({
-          email,
-          password,
-          role,
-        });
+    setIsSubmitting(true);
+    setErrorMessage("");
 
-    router.replace(getRoleHome(user.role));
+    try {
+      const user = isRegister
+        ? await authService.register({
+            name,
+            email,
+            password,
+            role,
+          })
+        : await authService.login({
+            email,
+            password,
+            role,
+          });
+
+      router.replace(getRoleHome(user.role));
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Authentication failed"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -96,6 +113,14 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              {errorMessage && (
+                <Alert variant="destructive">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle>Authentication failed</AlertTitle>
+                  <AlertDescription>{errorMessage}</AlertDescription>
+                </Alert>
+              )}
+
               {isRegister && (
                 <Field>
                   <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -158,10 +183,17 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
                 disabled={
                   !email.trim() ||
                   !password.trim() ||
-                  (isRegister && !name.trim())
+                  (isRegister && !name.trim()) ||
+                  isSubmitting
                 }
               >
-                {isRegister ? "Create Account" : "Log In"}
+                {isSubmitting
+                  ? isRegister
+                    ? "Creating..."
+                    : "Logging in..."
+                  : isRegister
+                    ? "Create Account"
+                    : "Log In"}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">

@@ -58,6 +58,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   type MockClassDetails,
   type MockStudent,
@@ -65,7 +66,7 @@ import {
   type MockWordSetSummary,
 } from "@/types/mock";
 import { classesService } from "@/services";
-import { getMistakeRate } from "@/utils";
+import { getErrorMessage, getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;
@@ -89,6 +90,8 @@ export function ClassDetailsPage({
   const [removeStudentDialogStudent, setRemoveStudentDialogStudent] =
     useState<MockStudent | null>(null);
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
+  const [actionError, setActionError] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [classOverview, setClassOverview] = useState({
     name: classDetails.name,
     description: classDetails.description,
@@ -133,39 +136,66 @@ export function ClassDetailsPage({
   };
 
   const handleAssignWordSet = async (wordSet: MockWordSetSummary) => {
-    const assignedWordSet = await classesService.assignWordSet(
-      classDetails.id,
-      wordSet,
-    );
+    setPendingAction("assign-word-set");
+    setActionError("");
 
-    setAssignedWordSets((currentWordSets) => [
-      ...currentWordSets,
-      {
-        ...assignedWordSet,
-        assignedStudents: students.length,
-      },
-    ]);
-    setAssignDialogOpen(false);
+    try {
+      const assignedWordSet = await classesService.assignWordSet(
+        classDetails.id,
+        wordSet,
+      );
+
+      setAssignedWordSets((currentWordSets) => [
+        ...currentWordSets,
+        {
+          ...assignedWordSet,
+          assignedStudents: students.length,
+        },
+      ]);
+      setAssignDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not assign word set"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleUpdateClassOverview = async (overview: ClassOverviewInput) => {
-    const updatedClass = await classesService.updateClassOverview(
-      classDetails.id,
-      overview,
-    );
+    setPendingAction("update-class");
+    setActionError("");
 
-    setClassOverview({
-      name: updatedClass.name,
-      description: updatedClass.description,
-      level: updatedClass.level,
-    });
-    setEditDialogOpen(false);
+    try {
+      const updatedClass = await classesService.updateClassOverview(
+        classDetails.id,
+        overview,
+      );
+
+      setClassOverview({
+        name: updatedClass.name,
+        description: updatedClass.description,
+        level: updatedClass.level,
+      });
+      setEditDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update class"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleDeleteClass = async () => {
-    await classesService.deleteClass(classDetails.id);
-    setDeleteDialogOpen(false);
-    router.push("/teacher/classes");
+    setPendingAction("delete-class");
+    setActionError("");
+
+    try {
+      await classesService.deleteClass(classDetails.id);
+      setDeleteDialogOpen(false);
+      router.push("/teacher/classes");
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not delete class"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleReviewProblemWords = () => {
@@ -175,30 +205,45 @@ export function ClassDetailsPage({
   };
 
   const handleAddStudent = async (student: NewStudentInput) => {
-    const addedStudent = await classesService.addStudent(
-      classDetails.id,
-      student,
-    );
+    setPendingAction("add-student");
+    setActionError("");
 
-    setStudents((currentStudents) => [
-      ...currentStudents,
-      addedStudent,
-    ]);
-    setInviteStudentDialogOpen(false);
+    try {
+      const addedStudent = await classesService.addStudent(
+        classDetails.id,
+        student,
+      );
+
+      setStudents((currentStudents) => [...currentStudents, addedStudent]);
+      setInviteStudentDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not add student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleUpdateStudent = async (updatedStudent: StudentProfileInput) => {
-    const savedStudent = await classesService.updateStudent(
-      classDetails.id,
-      updatedStudent,
-    );
+    setPendingAction("update-student");
+    setActionError("");
 
-    setStudents((currentStudents) =>
-      currentStudents.map((student) =>
-        student.id === savedStudent.id ? savedStudent : student,
-      ),
-    );
-    setEditStudentDialogStudent(null);
+    try {
+      const savedStudent = await classesService.updateStudent(
+        classDetails.id,
+        updatedStudent,
+      );
+
+      setStudents((currentStudents) =>
+        currentStudents.map((student) =>
+          student.id === savedStudent.id ? savedStudent : student,
+        ),
+      );
+      setEditStudentDialogStudent(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleRemoveStudent = async () => {
@@ -206,17 +251,26 @@ export function ClassDetailsPage({
       return;
     }
 
-    const removedStudent = await classesService.removeStudent(
-      classDetails.id,
-      removeStudentDialogStudent.id,
-    );
+    setPendingAction("remove-student");
+    setActionError("");
 
-    setStudents((currentStudents) =>
-      currentStudents.filter(
-        (student) => student.id !== removedStudent.studentId,
-      ),
-    );
-    setRemoveStudentDialogStudent(null);
+    try {
+      const removedStudent = await classesService.removeStudent(
+        classDetails.id,
+        removeStudentDialogStudent.id,
+      );
+
+      setStudents((currentStudents) =>
+        currentStudents.filter(
+          (student) => student.id !== removedStudent.studentId,
+        ),
+      );
+      setRemoveStudentDialogStudent(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not remove student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   return (
@@ -241,6 +295,18 @@ export function ClassDetailsPage({
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="flex flex-col gap-4">
+            {actionError && (
+              <Alert variant="destructive">
+                <AlertTitle>Action failed</AlertTitle>
+                <AlertDescription>{actionError}</AlertDescription>
+              </Alert>
+            )}
+            {pendingAction && (
+              <div className="text-sm text-muted-foreground">
+                Saving changes...
+              </div>
+            )}
+
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
               <Card>
                 <CardHeader className="pb-3">

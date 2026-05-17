@@ -29,6 +29,7 @@ import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import type { MockWordSetSummary } from "@/types/mock";
 import { wordSetsService } from "@/services";
+import { getErrorMessage } from "@/utils";
 
 interface TeacherWordSetsPageProps {
   wordSets: MockWordSetSummary[];
@@ -148,6 +149,8 @@ function CreateWordSetDialog({
 }: CreateWordSetDialogProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -156,12 +159,21 @@ function CreateWordSetDialog({
       return;
     }
 
-    await onCreate({
-      title: title.trim(),
-      description: description.trim(),
-    });
-    setTitle("");
-    setDescription("");
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      await onCreate({
+        title: title.trim(),
+        description: description.trim(),
+      });
+      setTitle("");
+      setDescription("");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Could not create word set"));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -176,6 +188,11 @@ function CreateWordSetDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-6">
+            {errorMessage && (
+              <div className="rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
             <Field>
               <FieldLabel htmlFor="new-word-set-title">Title</FieldLabel>
               <Input
@@ -209,9 +226,9 @@ function CreateWordSetDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!title.trim() || !description.trim()}
+              disabled={!title.trim() || !description.trim() || isSubmitting}
             >
-              Create Word Set
+              {isSubmitting ? "Creating..." : "Create Word Set"}
             </Button>
           </DialogFooter>
         </form>
