@@ -7,11 +7,9 @@ import {
   BookOpen,
   ListChecks,
   Plus,
-  TrendingDown,
   UserRoundCheck,
   Users,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -23,8 +21,8 @@ import {
   mockClasses,
   mockWordSetSummaries,
 } from "@/mock/mock-data";
-import { type MockProblemWord, type MockStudent } from "@/types/mock";
-import { getAverage, getMistakeRate } from "@/utils";
+import { type MockClassDetails, type MockStudent } from "@/types/mock";
+import { getAverage } from "@/utils";
 
 export function TeacherDashboard() {
   const router = useRouter();
@@ -37,7 +35,6 @@ export function TeacherDashboard() {
   const averageProgress = getAverage(
     mockClasses.map((classItem) => classItem.progress),
   );
-  const problemWords = useMemo(() => getTopProblemWords(), []);
   const students = useMemo(() => getStudentPreviewData(), []);
   const topStudents = [...students]
     .sort((a, b) => b.progress - a.progress)
@@ -86,13 +83,19 @@ export function TeacherDashboard() {
             <section className="grid gap-4 xl:grid-cols-12">
               <Card className="h-full xl:col-span-4">
                 <CardHeader className="pb-2">
-                  <CardTitle>Problem Words</CardTitle>
+                  <CardTitle>Class Progress</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
-                  <div className="max-h-[360px] overflow-y-auto rounded-lg border">
+                  <div className="max-h-[260px] overflow-y-auto rounded-lg border">
                     <div className="divide-y">
-                      {problemWords.slice(0, 3).map((word) => (
-                        <ProblemWordRow key={word.id} word={word} />
+                      {mockClassDetails.slice(0, 3).map((classItem) => (
+                        <ClassProgressRow
+                          key={classItem.id}
+                          classItem={classItem}
+                          onOpen={() =>
+                            router.push(`/teacher/classes/${classItem.id}`)
+                          }
+                        />
                       ))}
                     </div>
                   </div>
@@ -145,35 +148,32 @@ function StatsCard({ icon: Icon, label, value }: StatsCardProps) {
   );
 }
 
-function ProblemWordRow({ word }: { word: MockProblemWord }) {
-  const mistakeRate = getMistakeRate(word);
-
+function ClassProgressRow({
+  classItem,
+  onOpen,
+}: {
+  classItem: MockClassDetails;
+  onOpen: () => void;
+}) {
   return (
-    <div className="px-4 py-2">
-      <div className="grid gap-2">
+    <button
+      type="button"
+      className="w-full cursor-pointer px-4 py-2 text-left transition-colors hover:bg-muted/40"
+      onClick={onOpen}
+    >
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate font-medium">{word.term}</div>
-          <div className="line-clamp-2 break-words text-sm text-muted-foreground">
-            {word.translation}
+          <div className="font-medium">{classItem.name}</div>
+          <div className="text-sm text-muted-foreground">
+            {classItem.students} students / {classItem.wordSets} word sets
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Badge
-            variant="outline"
-            className="shrink-0 border-destructive/30 text-destructive"
-          >
-            {mistakeRate}% mistakes
-          </Badge>
-          <span className="text-sm text-muted-foreground">
-            {word.affectedStudents} students / {word.wrongAnswers} wrong
-          </span>
-        </div>
+        <span className="shrink-0 text-sm font-medium">
+          {classItem.progress}%
+        </span>
       </div>
-      <Progress
-        value={mistakeRate}
-        className="mt-1.5 h-1.5 [&_[data-slot=progress-indicator]]:bg-destructive"
-      />
-    </div>
+      <Progress value={classItem.progress} className="mt-1.5 h-1.5" />
+    </button>
   );
 }
 
@@ -233,34 +233,6 @@ function StudentsPreview({
       </CardContent>
     </Card>
   );
-}
-
-function getTopProblemWords() {
-  const wordsByTerm = new Map<string, MockProblemWord>();
-
-  for (const classItem of mockClassDetails) {
-    for (const word of classItem.problemWords) {
-      const existing = wordsByTerm.get(word.term);
-
-      if (!existing) {
-        wordsByTerm.set(word.term, { ...word });
-        continue;
-      }
-
-      existing.correctAnswers += word.correctAnswers;
-      existing.wrongAnswers += word.wrongAnswers;
-      existing.affectedStudents += word.affectedStudents;
-    }
-  }
-
-  return [...wordsByTerm.values()]
-    .sort((a, b) => {
-      const aRate = getMistakeRate(a);
-      const bRate = getMistakeRate(b);
-
-      return bRate - aRate;
-    })
-    .slice(0, 5);
 }
 
 function getStudentPreviewData(): StudentPreview[] {

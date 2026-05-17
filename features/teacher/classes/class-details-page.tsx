@@ -84,6 +84,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     useState<MockStudent | null>(null);
   const [removeStudentDialogStudent, setRemoveStudentDialogStudent] =
     useState<MockStudent | null>(null);
+  const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
   const [classOverview, setClassOverview] = useState({
     name: classDetails.name,
     description: classDetails.description,
@@ -94,6 +95,13 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   );
   const [assignedWordSets, setAssignedWordSets] = useState<MockWordSet[]>(
     classDetails.wordSetsList,
+  );
+  const filteredStudents = useMemo(
+    () =>
+      students.filter((student) =>
+        matchesStudentFilter(student, studentFilter),
+      ),
+    [studentFilter, students],
   );
 
   const availableWordSets = mockWordSetSummaries.filter(
@@ -146,6 +154,12 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   const handleDeleteClass = () => {
     setDeleteDialogOpen(false);
     router.push("/teacher/classes");
+  };
+
+  const handleReviewProblemWords = () => {
+    document
+      .getElementById("problem-words")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleAddStudent = (student: NewStudentInput) => {
@@ -302,13 +316,28 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between gap-3">
                   <CardTitle>Students</CardTitle>
-                  <Button
-                    size="sm"
-                    onClick={() => setInviteStudentDialogOpen(true)}
-                  >
-                    <Plus className="size-4" />
-                    Invite / Add Student
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {studentFilterOptions.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        size="sm"
+                        variant={
+                          studentFilter === option.value ? "default" : "outline"
+                        }
+                        onClick={() => setStudentFilter(option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                    <Button
+                      size="sm"
+                      onClick={() => setInviteStudentDialogOpen(true)}
+                    >
+                      <Plus className="size-4" />
+                      Invite / Add Student
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -324,7 +353,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students.map((student) => (
+                      {filteredStudents.map((student) => (
                         <TableRow key={student.id}>
                           <TableCell>
                             <div className="font-medium">{student.name}</div>
@@ -373,6 +402,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
               <ProblemWordsCard
                 problemWords={classDetails.problemWords}
                 totalWrongAnswers={totalWrongAnswers}
+                onReview={handleReviewProblemWords}
               />
             </section>
 
@@ -497,18 +527,19 @@ function SummaryMetric({ icon: Icon, label, value }: SummaryMetricProps) {
 interface ProblemWordsCardProps {
   problemWords: MockClassDetails["problemWords"];
   totalWrongAnswers: number;
+  onReview: () => void;
 }
 
 function ProblemWordsCard({
   problemWords,
   totalWrongAnswers,
+  onReview,
 }: ProblemWordsCardProps) {
   return (
-    <Card>
+    <Card id="problem-words">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>Problem Words</CardTitle>
-          <TrendingDown className="size-5 text-muted-foreground" />
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -608,6 +639,30 @@ function StudentActionsMenu({
 interface NewStudentInput {
   email: string;
   name: string;
+}
+
+type StudentFilter = "all" | "low-progress" | "inactive";
+
+const studentFilterOptions: Array<{ label: string; value: StudentFilter }> = [
+  { label: "All", value: "all" },
+  { label: "Low progress (<50%)", value: "low-progress" },
+  { label: "Inactive", value: "inactive" },
+];
+
+function matchesStudentFilter(student: MockStudent, filter: StudentFilter) {
+  if (filter === "low-progress") {
+    return student.progress < 50;
+  }
+
+  if (filter === "inactive") {
+    return isInactiveStudent(student);
+  }
+
+  return true;
+}
+
+function isInactiveStudent(student: MockStudent) {
+  return !["Today", "Yesterday"].includes(student.lastPracticedAt);
 }
 
 interface InviteStudentDialogProps {
@@ -857,7 +912,9 @@ function EditStudentDialog({
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Student</DialogTitle>
-            <DialogDescription>Update student profile details.</DialogDescription>
+            <DialogDescription>
+              Update student profile details.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-6">
