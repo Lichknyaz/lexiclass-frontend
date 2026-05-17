@@ -1,7 +1,5 @@
 import {
   getMockClassDetails,
-  getMockStudentWordSet,
-  getMockStudentWordSets,
   getMockWordSetDetails,
   mockClassDetails,
   mockClasses,
@@ -112,8 +110,35 @@ export interface TeacherAnalytics {
   problemWords: MockProblemWord[];
 }
 
+export interface AssignmentInput {
+  classId: string;
+  wordSetId: string;
+}
+
+export interface MockAssignment {
+  id: string;
+  classId: string;
+  wordSetId: string;
+  assignedAt: string;
+}
+
 let practiceAttemptSequence = 0;
 const practiceAttempts: StoredPracticeAttempt[] = [];
+let assignments = createInitialAssignments();
+
+export const assignmentsService = {
+  async listAssignments(): Promise<MockAssignment[]> {
+    return clone(assignments);
+  },
+
+  async createAssignment(input: AssignmentInput): Promise<MockAssignment> {
+    return clone(createAssignmentRecord(input));
+  },
+
+  resetAssignments(nextAssignments = createInitialAssignments()) {
+    assignments = clone(nextAssignments);
+  },
+};
 
 export const classesService = {
   async listClasses(): Promise<MockClassSummary[]> {
@@ -214,9 +239,13 @@ export const classesService = {
     wordSet: MockWordSetSummary,
   ): Promise<MockWordSet> {
     const classDetails = getRequiredClassDetails(classId);
+    const assignment = createAssignmentRecord({
+      classId,
+      wordSetId: wordSet.id,
+    });
 
     return {
-      id: `${classId}-${wordSet.id}`,
+      id: assignment.id,
       classId,
       title: wordSet.title,
       description: wordSet.description,
@@ -275,6 +304,7 @@ export const wordSetsService = {
     classItem: MockClassSummary,
   ): Promise<MockClassSummary> {
     getRequiredWordSetDetails(wordSetId);
+    createAssignmentRecord({ classId: classItem.id, wordSetId });
 
     return clone(classItem);
   },
@@ -341,13 +371,22 @@ export const studentService = {
   },
 
   async listAssignedWordSets(): Promise<MockStudentWordSet[]> {
-    return clone(getMockStudentWordSets());
+    const joinedClassIds = new Set(mockStudentClasses.map((classItem) => classItem.id));
+
+    return clone(
+      assignments
+        .filter((assignment) => joinedClassIds.has(assignment.classId))
+        .map(toStudentWordSet)
+        .filter((wordSet): wordSet is MockStudentWordSet => Boolean(wordSet)),
+    );
   },
 
   async getAssignedWordSet(
     id: string,
   ): Promise<MockStudentWordSet | undefined> {
-    return clone(getMockStudentWordSet(id));
+    const assignedWordSets = await this.listAssignedWordSets();
+
+    return clone(assignedWordSets.find((wordSet) => wordSet.id === id));
   },
 
   async listProgressWords(): Promise<MockStudentProgressWord[]> {
@@ -459,6 +498,67 @@ export const analyticsService = {
     };
   },
 };
+
+function createInitialAssignments() {
+  return mockClassDetails.flatMap((classItem) =>
+    classItem.wordSetsList.map((wordSet) => ({
+      id: wordSet.id,
+      classId: classItem.id,
+      wordSetId: getAssignmentWordSetId(wordSet.id),
+      assignedAt: "2026-05-17T00:00:00.000Z",
+    })),
+  );
+}
+
+function createAssignmentRecord(input: AssignmentInput) {
+  getRequiredClassDetails(input.classId);
+  getRequiredWordSetDetails(input.wordSetId);
+
+  const id = `${input.classId}-${input.wordSetId}`;
+  const existingAssignment = assignments.find(
+    (assignment) => assignment.id === id,
+  );
+
+  if (existingAssignment) {
+    return existingAssignment;
+  }
+
+  const assignment = {
+    id,
+    classId: input.classId,
+    wordSetId: input.wordSetId,
+    assignedAt: new Date().toISOString(),
+  };
+
+  assignments.push(assignment);
+  return assignment;
+}
+
+function toStudentWordSet(assignment: MockAssignment) {
+  const classDetails = getMockClassDetails(assignment.classId);
+  const wordSetDetails = getMockWordSetDetails(assignment.wordSetId);
+
+  if (!classDetails || !wordSetDetails) {
+    return undefined;
+  }
+
+  return {
+    id: assignment.id,
+    classId: classDetails.id,
+    className: classDetails.name,
+    title: wordSetDetails.title,
+    words: wordSetDetails.words,
+    completedWords: 0,
+    progress: 0,
+    dueLabel: "Practice today",
+  };
+}
+
+function getAssignmentWordSetId(assignmentId: string) {
+  const [, ...wordSetIdParts] = assignmentId.split("-");
+
+  return wordSetIdParts.join("-");
+}
 
 function normalizeAttemptStatus(
   attempt: PracticeAttemptInput,

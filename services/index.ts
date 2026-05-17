@@ -18,11 +18,14 @@ export {
 } from "./api-client";
 export {
   analyticsService,
+  assignmentsService,
   classesService,
   practiceService,
   studentService,
   wordSetsService,
+  type AssignmentInput,
   type CreateClassInput,
+  type MockAssignment,
   type PracticeAttemptInput,
   type PracticeSessionResult,
   type PracticeWordResult,

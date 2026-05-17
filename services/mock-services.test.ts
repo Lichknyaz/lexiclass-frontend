@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   analyticsService,
+  assignmentsService,
   classesService,
   practiceService,
   studentService,
@@ -70,12 +71,22 @@ describe("mock domain services", () => {
   });
 
   it("assigns a word set to a class", async () => {
+    assignmentsService.resetAssignments();
+
     const [wordSet] = await wordSetsService.listWordSetSummaries();
     const assigned = await classesService.assignWordSet("1", wordSet);
+    const assignments = await assignmentsService.listAssignments();
 
     assert.equal(assigned.classId, "1");
+    assert.equal(assigned.id, "1-w1");
     assert.equal(assigned.title, wordSet.title);
     assert.equal(assigned.words, wordSet.words);
+    assert.ok(
+      assignments.some(
+        (assignment) =>
+          assignment.classId === "1" && assignment.wordSetId === wordSet.id,
+      ),
+    );
   });
 
   it("loads teacher and student word-set views", async () => {
@@ -107,6 +118,8 @@ describe("mock domain services", () => {
   });
 
   it("assigns a word set to a class", async () => {
+    assignmentsService.resetAssignments();
+
     const assigned = await wordSetsService.assignToClass("w1", {
       id: "2",
       name: "English B1",
@@ -114,9 +127,31 @@ describe("mock domain services", () => {
       wordSets: 3,
       progress: 74,
     });
+    const assignments = await assignmentsService.listAssignments();
 
     assert.equal(assigned.id, "2");
     assert.equal(assigned.name, "English B1");
+    assert.ok(
+      assignments.some(
+        (assignment) =>
+          assignment.classId === "2" && assignment.wordSetId === "w1",
+      ),
+    );
+  });
+
+  it("lists student word sets only for joined-class assignments", async () => {
+    assignmentsService.resetAssignments([]);
+
+    await assignmentsService.createAssignment({ classId: "1", wordSetId: "w2" });
+    await assignmentsService.createAssignment({ classId: "2", wordSetId: "w1" });
+    await assignmentsService.createAssignment({ classId: "4", wordSetId: "w1" });
+
+    const assignedWordSets = await studentService.listAssignedWordSets();
+
+    assert.deepEqual(
+      assignedWordSets.map((wordSet) => wordSet.id),
+      ["1-w2", "4-w1"],
+    );
   });
 
   it("adds, updates, and deletes words in a word set", async () => {
