@@ -16,6 +16,7 @@ import { ClassCard, type ClassData } from "@/components/dashboard/class-card";
 import { CreateClassDialog } from "@/components/dashboard/create-class-dialog";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { classesService } from "@/services";
 
 interface TeacherClassesPageProps {
   initialClasses: ClassData[];
@@ -28,14 +29,8 @@ export function TeacherClassesPage({
   const [classes, setClasses] = useState<ClassData[]>(initialClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const handleCreateClass = (className: string) => {
-    const newClass: ClassData = {
-      id: Date.now().toString(),
-      name: className,
-      students: 0,
-      wordSets: 0,
-      progress: 0,
-    };
+  const handleCreateClass = async (className: string) => {
+    const newClass = await classesService.createClass({ name: className });
 
     setClasses((prev) => [...prev, newClass]);
   };

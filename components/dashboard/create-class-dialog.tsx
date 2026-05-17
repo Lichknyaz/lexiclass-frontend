@@ -16,7 +16,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 interface CreateClassDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCreate: (className: string) => void;
+  onCreate: (className: string) => void | Promise<void>;
 }
 
 export function CreateClassDialog({
@@ -26,10 +26,10 @@ export function CreateClassDialog({
 }: CreateClassDialogProps) {
   const [className, setClassName] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (className.trim()) {
-      onCreate(className.trim());
+      await onCreate(className.trim());
       setClassName("");
       onOpenChange(false);
     }

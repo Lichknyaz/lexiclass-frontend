@@ -13,9 +13,11 @@ import type {
   MockClassDetails,
   MockClassSummary,
   MockProblemWord,
+  MockStudent,
   MockStudentClass,
   MockStudentProgressWord,
   MockStudentWordSet,
+  MockWordSet,
   MockWordSetDetails,
   MockWordSetSummary,
 } from "../types/mock.ts";
@@ -23,6 +25,21 @@ import { getAverage, getMistakeRate } from "../utils/progress.ts";
 
 export interface CreateClassInput {
   name: string;
+}
+
+export interface ClassOverviewInput {
+  name: string;
+  description: string;
+  level: string;
+}
+
+export interface StudentInput {
+  name: string;
+  email: string;
+}
+
+export interface StudentProfileInput extends StudentInput {
+  id: string;
 }
 
 export interface PracticeAttemptInput {
@@ -80,6 +97,94 @@ export const classesService = {
       students: 0,
       wordSets: 0,
       progress: 0,
+    };
+  },
+
+  async updateClassOverview(
+    id: string,
+    input: ClassOverviewInput,
+  ): Promise<MockClassDetails> {
+    const classDetails = getRequiredClassDetails(id);
+
+    return {
+      ...classDetails,
+      name: input.name.trim(),
+      description: input.description.trim(),
+      level: input.level.trim(),
+    };
+  },
+
+  async deleteClass(id: string): Promise<{ id: string }> {
+    getRequiredClassDetails(id);
+
+    return { id };
+  },
+
+  async addStudent(
+    classId: string,
+    input: StudentInput,
+  ): Promise<MockStudent> {
+    getRequiredClassDetails(classId);
+
+    const email = input.email.trim();
+    const fallbackName = email.split("@")[0] || "New student";
+
+    return {
+      id: `local-student-${Date.now()}`,
+      name: input.name.trim() || fallbackName,
+      email,
+      progress: 0,
+      correctAnswers: 0,
+      wrongAnswers: 0,
+      lastPracticedAt: "Not practiced yet",
+    };
+  },
+
+  async updateStudent(
+    classId: string,
+    input: StudentProfileInput,
+  ): Promise<MockStudent> {
+    const classDetails = getRequiredClassDetails(classId);
+    const existingStudent = classDetails.studentsList.find(
+      (student) => student.id === input.id,
+    );
+
+    return {
+      ...(existingStudent ?? {
+        progress: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+        lastPracticedAt: "Not practiced yet",
+      }),
+      id: input.id,
+      name: input.name.trim(),
+      email: input.email.trim(),
+    };
+  },
+
+  async removeStudent(
+    classId: string,
+    studentId: string,
+  ): Promise<{ studentId: string }> {
+    getRequiredClassDetails(classId);
+
+    return { studentId };
+  },
+
+  async assignWordSet(
+    classId: string,
+    wordSet: MockWordSetSummary,
+  ): Promise<MockWordSet> {
+    const classDetails = getRequiredClassDetails(classId);
+
+    return {
+      id: `${classId}-${wordSet.id}`,
+      classId,
+      title: wordSet.title,
+      description: wordSet.description,
+      words: wordSet.words,
+      assignedStudents: classDetails.students,
+      averageProgress: 0,
     };
   },
 };
@@ -215,6 +320,16 @@ function aggregateProblemWords(classDetails: MockClassDetails[]) {
   return [...wordsByTerm.values()].sort(
     (a, b) => getMistakeRate(b) - getMistakeRate(a),
   );
+}
+
+function getRequiredClassDetails(id: string) {
+  const classDetails = getMockClassDetails(id);
+
+  if (!classDetails) {
+    throw new Error("Class not found");
+  }
+
+  return clone(classDetails);
 }
 
 function clone<T>(value: T): T {

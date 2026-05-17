@@ -64,6 +64,7 @@ import {
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
+import { classesService } from "@/services";
 import { getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
@@ -131,30 +132,38 @@ export function ClassDetailsPage({
     window.setTimeout(() => setCopied(false), 1600);
   };
 
-  const handleAssignWordSet = (wordSet: MockWordSetSummary) => {
-    const assignedWordSet: MockWordSet = {
-      id: `${classDetails.id}-${wordSet.id}`,
-      classId: classDetails.id,
-      title: wordSet.title,
-      description: wordSet.description,
-      words: wordSet.words,
-      assignedStudents: students.length,
-      averageProgress: 0,
-    };
+  const handleAssignWordSet = async (wordSet: MockWordSetSummary) => {
+    const assignedWordSet = await classesService.assignWordSet(
+      classDetails.id,
+      wordSet,
+    );
 
     setAssignedWordSets((currentWordSets) => [
       ...currentWordSets,
-      assignedWordSet,
+      {
+        ...assignedWordSet,
+        assignedStudents: students.length,
+      },
     ]);
     setAssignDialogOpen(false);
   };
 
-  const handleUpdateClassOverview = (overview: ClassOverviewInput) => {
-    setClassOverview(overview);
+  const handleUpdateClassOverview = async (overview: ClassOverviewInput) => {
+    const updatedClass = await classesService.updateClassOverview(
+      classDetails.id,
+      overview,
+    );
+
+    setClassOverview({
+      name: updatedClass.name,
+      description: updatedClass.description,
+      level: updatedClass.level,
+    });
     setEditDialogOpen(false);
   };
 
-  const handleDeleteClass = () => {
+  const handleDeleteClass = async () => {
+    await classesService.deleteClass(classDetails.id);
     setDeleteDialogOpen(false);
     router.push("/teacher/classes");
   };
@@ -165,47 +174,46 @@ export function ClassDetailsPage({
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const handleAddStudent = (student: NewStudentInput) => {
-    const fallbackName = student.email.split("@")[0] || "New student";
+  const handleAddStudent = async (student: NewStudentInput) => {
+    const addedStudent = await classesService.addStudent(
+      classDetails.id,
+      student,
+    );
 
     setStudents((currentStudents) => [
       ...currentStudents,
-      {
-        id: Date.now().toString(),
-        name: student.name.trim() || fallbackName,
-        email: student.email.trim(),
-        progress: 0,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-        lastPracticedAt: "Not practiced yet",
-      },
+      addedStudent,
     ]);
     setInviteStudentDialogOpen(false);
   };
 
-  const handleUpdateStudent = (updatedStudent: StudentProfileInput) => {
+  const handleUpdateStudent = async (updatedStudent: StudentProfileInput) => {
+    const savedStudent = await classesService.updateStudent(
+      classDetails.id,
+      updatedStudent,
+    );
+
     setStudents((currentStudents) =>
       currentStudents.map((student) =>
-        student.id === updatedStudent.id
-          ? {
-              ...student,
-              name: updatedStudent.name,
-              email: updatedStudent.email,
-            }
-          : student,
+        student.id === savedStudent.id ? savedStudent : student,
       ),
     );
     setEditStudentDialogStudent(null);
   };
 
-  const handleRemoveStudent = () => {
+  const handleRemoveStudent = async () => {
     if (!removeStudentDialogStudent) {
       return;
     }
 
+    const removedStudent = await classesService.removeStudent(
+      classDetails.id,
+      removeStudentDialogStudent.id,
+    );
+
     setStudents((currentStudents) =>
       currentStudents.filter(
-        (student) => student.id !== removeStudentDialogStudent.id,
+        (student) => student.id !== removedStudent.studentId,
       ),
     );
     setRemoveStudentDialogStudent(null);

@@ -30,6 +30,54 @@ describe("mock domain services", () => {
     assert.equal(after.length, before.length);
   });
 
+  it("updates class overview fields", async () => {
+    const updated = await classesService.updateClassOverview("1", {
+      name: "Updated A2",
+      description: "Updated description",
+      level: "A2+",
+    });
+
+    assert.equal(updated.id, "1");
+    assert.equal(updated.name, "Updated A2");
+    assert.equal(updated.description, "Updated description");
+    assert.equal(updated.level, "A2+");
+  });
+
+  it("deletes a class by id", async () => {
+    const result = await classesService.deleteClass("1");
+
+    assert.deepEqual(result, { id: "1" });
+  });
+
+  it("adds, updates, and removes students through class service", async () => {
+    const added = await classesService.addStudent("1", {
+      name: "New Student",
+      email: "new.student@example.com",
+    });
+    const updated = await classesService.updateStudent("1", {
+      id: added.id,
+      name: "Updated Student",
+      email: "updated.student@example.com",
+    });
+    const removed = await classesService.removeStudent("1", added.id);
+
+    assert.equal(added.name, "New Student");
+    assert.equal(added.email, "new.student@example.com");
+    assert.equal(added.progress, 0);
+    assert.equal(updated.id, added.id);
+    assert.equal(updated.name, "Updated Student");
+    assert.deepEqual(removed, { studentId: added.id });
+  });
+
+  it("assigns a word set to a class", async () => {
+    const [wordSet] = await wordSetsService.listWordSetSummaries();
+    const assigned = await classesService.assignWordSet("1", wordSet);
+
+    assert.equal(assigned.classId, "1");
+    assert.equal(assigned.title, wordSet.title);
+    assert.equal(assigned.words, wordSet.words);
+  });
+
   it("loads teacher and student word-set views", async () => {
     const teacherSets = await wordSetsService.listWordSetSummaries();
     const studentSets = await studentService.listAssignedWordSets();
