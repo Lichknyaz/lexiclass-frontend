@@ -89,8 +89,8 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {isRegister
-                ? "Choose your role and create a local MVP account."
-                : "Use any email and password to enter the MVP prototype."}
+                ? "Choose your role and create an account."
+                : "Use any email and password to enter."}
             </p>
           </CardHeader>
           <CardContent>
@@ -128,7 +128,9 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="Enter password"
-                  autoComplete={isRegister ? "new-password" : "current-password"}
+                  autoComplete={
+                    isRegister ? "new-password" : "current-password"
+                  }
                 />
               </Field>
 
