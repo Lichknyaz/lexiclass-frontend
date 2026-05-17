@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   analyticsService,
+  assignmentsService,
   classesService,
   practiceService,
   studentService,
@@ -70,12 +71,22 @@ describe("mock domain services", () => {
   });
 
   it("assigns a word set to a class", async () => {
+    assignmentsService.resetAssignments();
+
     const [wordSet] = await wordSetsService.listWordSetSummaries();
     const assigned = await classesService.assignWordSet("1", wordSet);
+    const assignments = await assignmentsService.listAssignments();
 
     assert.equal(assigned.classId, "1");
+    assert.equal(assigned.id, "1-w1");
     assert.equal(assigned.title, wordSet.title);
     assert.equal(assigned.words, wordSet.words);
+    assert.ok(
+      assignments.some(
+        (assignment) =>
+          assignment.classId === "1" && assignment.wordSetId === wordSet.id,
+      ),
+    );
   });
 
   it("loads teacher and student word-set views", async () => {
@@ -107,6 +118,8 @@ describe("mock domain services", () => {
   });
 
   it("assigns a word set to a class", async () => {
+    assignmentsService.resetAssignments();
+
     const assigned = await wordSetsService.assignToClass("w1", {
       id: "2",
       name: "English B1",
@@ -114,9 +127,31 @@ describe("mock domain services", () => {
       wordSets: 3,
       progress: 74,
     });
+    const assignments = await assignmentsService.listAssignments();
 
     assert.equal(assigned.id, "2");
     assert.equal(assigned.name, "English B1");
+    assert.ok(
+      assignments.some(
+        (assignment) =>
+          assignment.classId === "2" && assignment.wordSetId === "w1",
+      ),
+    );
+  });
+
+  it("lists student word sets only for joined-class assignments", async () => {
+    assignmentsService.resetAssignments([]);
+
+    await assignmentsService.createAssignment({ classId: "1", wordSetId: "w2" });
+    await assignmentsService.createAssignment({ classId: "2", wordSetId: "w1" });
+    await assignmentsService.createAssignment({ classId: "4", wordSetId: "w1" });
+
+    const assignedWordSets = await studentService.listAssignedWordSets();
+
+    assert.deepEqual(
+      assignedWordSets.map((wordSet) => wordSet.id),
+      ["1-w2", "4-w1"],
+    );
   });
 
   it("adds, updates, and deletes words in a word set", async () => {
@@ -154,22 +189,66 @@ describe("mock domain services", () => {
   });
 
   it("returns a practice result with per-word attempts", async () => {
+    practiceService.clearPracticeAttempts();
+
     const result = await practiceService.savePracticeSession({
       assignmentId: "1-w1",
       studentId: "student-1",
       mode: "writing",
       attempts: [
-        { wordId: "word-1", correct: true },
-        { wordId: "word-2", correct: false },
+        { wordId: "word-1", status: "correct", answeredAt: "2026-05-17T10:00:00.000Z" },
+        { wordId: "word-2", status: "wrong", answeredAt: "2026-05-17T10:01:00.000Z" },
       ],
     });
+    const storedAttempts = await practiceService.listPracticeAttempts();
 
     assert.equal(result.correctAnswers, 1);
     assert.equal(result.wrongAnswers, 1);
     assert.equal(result.wordResults.length, 2);
+    assert.equal(storedAttempts.length, 2);
+    assert.deepEqual(storedAttempts.map((attempt) => attempt.status), [
+      "correct",
+      "wrong",
+    ]);
+    assert.equal(storedAttempts[0].mode, "writing");
+    assert.equal(storedAttempts[0].assignmentId, "1-w1");
+    assert.equal(storedAttempts[0].studentId, "student-1");
+    assert.equal(storedAttempts[0].answeredAt, "2026-05-17T10:00:00.000Z");
+  });
+
+  it("derives problem-word analytics from saved practice attempts", async () => {
+    practiceService.clearPracticeAttempts();
+
+    await practiceService.savePracticeSession({
+      assignmentId: "1-w1",
+      studentId: "student-1",
+      mode: "multiple-choice",
+      attempts: [
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:00:00.000Z" },
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:01:00.000Z" },
+        { wordId: "word-2", status: "correct", answeredAt: "2026-05-17T10:02:00.000Z" },
+      ],
+    });
+    await practiceService.savePracticeSession({
+      assignmentId: "1-w1",
+      studentId: "student-2",
+      mode: "writing",
+      attempts: [
+        { wordId: "word-1", status: "wrong", answeredAt: "2026-05-17T10:03:00.000Z" },
+      ],
+    });
+
+    const analytics = await analyticsService.getTeacherAnalytics();
+
+    assert.equal(analytics.problemWords[0].id, "word-1");
+    assert.equal(analytics.problemWords[0].wrongAnswers, 3);
+    assert.equal(analytics.problemWords[0].correctAnswers, 0);
+    assert.equal(analytics.problemWords[0].affectedStudents, 2);
   });
 
   it("aggregates teacher analytics from mock data", async () => {
+    practiceService.clearPracticeAttempts();
+
     const analytics = await analyticsService.getTeacherAnalytics();
 
     assert.ok(analytics.totalStudents > 0);

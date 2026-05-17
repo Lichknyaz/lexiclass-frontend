@@ -17,15 +17,34 @@ export {
   type ApiRequestOptions,
 } from "./api-client";
 export {
-  analyticsService,
   classesService,
-  practiceService,
-  studentService,
-  wordSetsService,
+  type ClassOverviewInput,
   type CreateClassInput,
+  type StudentInput,
+  type StudentProfileInput,
+} from "./classes-service";
+export {
+  wordSetsService,
+  type CreateWordSetInput,
+  type WordInput,
+  type WordProfileInput,
+  type WordSetOverviewInput,
+} from "./word-sets-service";
+export { studentService } from "./student-service";
+export {
+  assignmentsService,
+  type AssignmentInput,
+  type MockAssignment,
+} from "./assignments-service";
+export {
+  practiceService,
   type PracticeAttemptInput,
   type PracticeSessionResult,
   type PracticeWordResult,
   type SavePracticeSessionInput,
+  type StoredPracticeAttempt,
+} from "./practice-service";
+export {
+  analyticsService,
   type TeacherAnalytics,
-} from "./mock-services";
+} from "./analytics-service";

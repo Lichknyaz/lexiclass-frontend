@@ -1,12 +1,11 @@
 import {
   getMockClassDetails,
-  getMockStudentWordSet,
-  getMockStudentWordSets,
   getMockWordSetDetails,
   mockClassDetails,
   mockClasses,
   mockStudentClasses,
   mockStudentProgressWords,
+  mockWordSetDetails,
   mockWordSetSummaries,
 } from "../mock/mock-data.ts";
 import type {
@@ -66,7 +65,9 @@ export interface WordProfileInput extends WordInput {
 
 export interface PracticeAttemptInput {
   wordId: string;
-  correct: boolean;
+  status?: "correct" | "wrong";
+  correct?: boolean;
+  answeredAt?: string;
 }
 
 export interface SavePracticeSessionInput {
@@ -80,6 +81,16 @@ export interface PracticeWordResult {
   wordId: string;
   correctAnswers: number;
   wrongAnswers: number;
+}
+
+export interface StoredPracticeAttempt {
+  id: string;
+  assignmentId: string;
+  studentId: string;
+  wordId: string;
+  status: "correct" | "wrong";
+  mode: SavePracticeSessionInput["mode"];
+  answeredAt: string;
 }
 
 export interface PracticeSessionResult {
@@ -98,6 +109,36 @@ export interface TeacherAnalytics {
   classProgress: MockClassDetails[];
   problemWords: MockProblemWord[];
 }
+
+export interface AssignmentInput {
+  classId: string;
+  wordSetId: string;
+}
+
+export interface MockAssignment {
+  id: string;
+  classId: string;
+  wordSetId: string;
+  assignedAt: string;
+}
+
+let practiceAttemptSequence = 0;
+const practiceAttempts: StoredPracticeAttempt[] = [];
+let assignments = createInitialAssignments();
+
+export const assignmentsService = {
+  async listAssignments(): Promise<MockAssignment[]> {
+    return clone(assignments);
+  },
+
+  async createAssignment(input: AssignmentInput): Promise<MockAssignment> {
+    return clone(createAssignmentRecord(input));
+  },
+
+  resetAssignments(nextAssignments = createInitialAssignments()) {
+    assignments = clone(nextAssignments);
+  },
+};
 
 export const classesService = {
   async listClasses(): Promise<MockClassSummary[]> {
@@ -198,9 +239,13 @@ export const classesService = {
     wordSet: MockWordSetSummary,
   ): Promise<MockWordSet> {
     const classDetails = getRequiredClassDetails(classId);
+    const assignment = createAssignmentRecord({
+      classId,
+      wordSetId: wordSet.id,
+    });
 
     return {
-      id: `${classId}-${wordSet.id}`,
+      id: assignment.id,
       classId,
       title: wordSet.title,
       description: wordSet.description,
@@ -259,6 +304,7 @@ export const wordSetsService = {
     classItem: MockClassSummary,
   ): Promise<MockClassSummary> {
     getRequiredWordSetDetails(wordSetId);
+    createAssignmentRecord({ classId: classItem.id, wordSetId });
 
     return clone(classItem);
   },
@@ -325,13 +371,22 @@ export const studentService = {
   },
 
   async listAssignedWordSets(): Promise<MockStudentWordSet[]> {
-    return clone(getMockStudentWordSets());
+    const joinedClassIds = new Set(mockStudentClasses.map((classItem) => classItem.id));
+
+    return clone(
+      assignments
+        .filter((assignment) => joinedClassIds.has(assignment.classId))
+        .map(toStudentWordSet)
+        .filter((wordSet): wordSet is MockStudentWordSet => Boolean(wordSet)),
+    );
   },
 
   async getAssignedWordSet(
     id: string,
   ): Promise<MockStudentWordSet | undefined> {
-    return clone(getMockStudentWordSet(id));
+    const assignedWordSets = await this.listAssignedWordSets();
+
+    return clone(assignedWordSets.find((wordSet) => wordSet.id === id));
   },
 
   async listProgressWords(): Promise<MockStudentProgressWord[]> {
@@ -372,11 +427,26 @@ export const practiceService = {
   async savePracticeSession(
     input: SavePracticeSessionInput,
   ): Promise<PracticeSessionResult> {
-    const wordResults = input.attempts.map((attempt) => ({
+    const storedAttempts = input.attempts.map((attempt) => {
+      const status = normalizeAttemptStatus(attempt);
+
+      return {
+        id: `practice-attempt-${++practiceAttemptSequence}`,
+        assignmentId: input.assignmentId,
+        studentId: input.studentId,
+        wordId: attempt.wordId,
+        status,
+        mode: input.mode,
+        answeredAt: attempt.answeredAt ?? new Date().toISOString(),
+      };
+    });
+    const wordResults = storedAttempts.map((attempt) => ({
       wordId: attempt.wordId,
-      correctAnswers: attempt.correct ? 1 : 0,
-      wrongAnswers: attempt.correct ? 0 : 1,
+      correctAnswers: attempt.status === "correct" ? 1 : 0,
+      wrongAnswers: attempt.status === "wrong" ? 1 : 0,
     }));
+
+    practiceAttempts.push(...storedAttempts);
 
     return {
       assignmentId: input.assignmentId,
@@ -393,11 +463,23 @@ export const practiceService = {
       wordResults,
     };
   },
+
+  async listPracticeAttempts(): Promise<StoredPracticeAttempt[]> {
+    return clone(practiceAttempts);
+  },
+
+  clearPracticeAttempts() {
+    practiceAttempts.length = 0;
+    practiceAttemptSequence = 0;
+  },
 };
 
 export const analyticsService = {
   async getTeacherAnalytics(): Promise<TeacherAnalytics> {
-    const problemWords = aggregateProblemWords(mockClassDetails);
+    const problemWords =
+      practiceAttempts.length > 0
+        ? aggregateProblemWordsFromAttempts(practiceAttempts)
+        : aggregateProblemWords(mockClassDetails);
 
     return {
       totalStudents: mockClassDetails.reduce(
@@ -416,6 +498,136 @@ export const analyticsService = {
     };
   },
 };
+
+function createInitialAssignments() {
+  return mockClassDetails.flatMap((classItem) =>
+    classItem.wordSetsList.map((wordSet) => ({
+      id: wordSet.id,
+      classId: classItem.id,
+      wordSetId: getAssignmentWordSetId(wordSet.id),
+      assignedAt: "2026-05-17T00:00:00.000Z",
+    })),
+  );
+}
+
+function createAssignmentRecord(input: AssignmentInput) {
+  getRequiredClassDetails(input.classId);
+  getRequiredWordSetDetails(input.wordSetId);
+
+  const id = `${input.classId}-${input.wordSetId}`;
+  const existingAssignment = assignments.find(
+    (assignment) => assignment.id === id,
+  );
+
+  if (existingAssignment) {
+    return existingAssignment;
+  }
+
+  const assignment = {
+    id,
+    classId: input.classId,
+    wordSetId: input.wordSetId,
+    assignedAt: new Date().toISOString(),
+  };
+
+  assignments.push(assignment);
+  return assignment;
+}
+
+function toStudentWordSet(assignment: MockAssignment) {
+  const classDetails = getMockClassDetails(assignment.classId);
+  const wordSetDetails = getMockWordSetDetails(assignment.wordSetId);
+
+  if (!classDetails || !wordSetDetails) {
+    return undefined;
+  }
+
+  return {
+    id: assignment.id,
+    classId: classDetails.id,
+    className: classDetails.name,
+    title: wordSetDetails.title,
+    words: wordSetDetails.words,
+    completedWords: 0,
+    progress: 0,
+    dueLabel: "Practice today",
+  };
+}
+
+function getAssignmentWordSetId(assignmentId: string) {
+  const [, ...wordSetIdParts] = assignmentId.split("-");
+
+  return wordSetIdParts.join("-");
+}
+
+function normalizeAttemptStatus(
+  attempt: PracticeAttemptInput,
+): StoredPracticeAttempt["status"] {
+  if (attempt.status) {
+    return attempt.status;
+  }
+
+  return attempt.correct ? "correct" : "wrong";
+}
+
+function aggregateProblemWordsFromAttempts(attempts: StoredPracticeAttempt[]) {
+  const wordsById = new Map<
+    string,
+    MockProblemWord & { studentIds: Set<string> }
+  >();
+
+  for (const attempt of attempts) {
+    const word = getMockWord(attempt.wordId);
+
+    if (!word) {
+      continue;
+    }
+
+    const existing = wordsById.get(attempt.wordId) ?? {
+      id: word.id,
+      term: word.term,
+      translation: word.translation,
+      wrongAnswers: 0,
+      correctAnswers: 0,
+      affectedStudents: 0,
+      studentIds: new Set<string>(),
+    };
+
+    if (attempt.status === "correct") {
+      existing.correctAnswers += 1;
+    } else {
+      existing.wrongAnswers += 1;
+      existing.studentIds.add(attempt.studentId);
+    }
+
+    existing.affectedStudents = existing.studentIds.size;
+    wordsById.set(attempt.wordId, existing);
+  }
+
+  return [...wordsById.values()]
+    .filter((word) => word.wrongAnswers > 0)
+    .map((word) => ({
+      id: word.id,
+      term: word.term,
+      translation: word.translation,
+      wrongAnswers: word.wrongAnswers,
+      correctAnswers: word.correctAnswers,
+      affectedStudents: word.affectedStudents,
+    }))
+    .sort((a, b) => getMistakeRate(b) - getMistakeRate(a));
+}
+
+function getMockWord(wordId: string) {
+  for (const wordSet of mockWordSetDetails) {
+    const word = wordSet.wordsList.find((item) => item.id === wordId);
+
+    if (word) {
+      return word;
+    }
+  }
+
+  return undefined;
+}
 
 function aggregateProblemWords(classDetails: MockClassDetails[]) {
   const wordsByTerm = new Map<string, MockProblemWord>();

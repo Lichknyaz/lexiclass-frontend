@@ -147,13 +147,12 @@ export function PracticePage({ wordSet, words: allWords }: PracticePageProps) {
     }
 
     const correct = answerStatus === "correct";
-    const nextAttempts = [
-      ...attempts,
-      {
-        wordId: currentWord.id,
-        correct,
-      },
-    ];
+    const nextAttempt: PracticeAttemptInput = {
+      wordId: currentWord.id,
+      status: correct ? "correct" : "wrong",
+      answeredAt: new Date().toISOString(),
+    };
+    const nextAttempts = [...attempts, nextAttempt];
 
     setAttempts(nextAttempts);
     setCorrectCount((value) => (correct ? value + 1 : value));
