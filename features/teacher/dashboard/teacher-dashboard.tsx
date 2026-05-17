@@ -17,25 +17,41 @@ import { CreateClassDialog } from "@/components/dashboard/create-class-dialog";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import {
-  mockClassDetails,
-  mockClasses,
-  mockWordSetSummaries,
-} from "@/mock/mock-data";
-import { type MockClassDetails, type MockStudent } from "@/types/mock";
+  type MockClassDetails,
+  type MockClassSummary,
+  type MockStudent,
+  type MockWordSetSummary,
+} from "@/types/mock";
+import type { TeacherAnalytics } from "@/services";
 import { getAverage } from "@/utils";
 
-export function TeacherDashboard() {
+interface TeacherDashboardProps {
+  classes: MockClassSummary[];
+  classDetails: MockClassDetails[];
+  wordSets: MockWordSetSummary[];
+  analytics: TeacherAnalytics;
+}
+
+export function TeacherDashboard({
+  classes,
+  classDetails,
+  wordSets,
+  analytics,
+}: TeacherDashboardProps) {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const totalStudents = mockClasses.reduce(
+  const totalStudents = classes.reduce(
     (total, classItem) => total + classItem.students,
     0,
   );
   const averageProgress = getAverage(
-    mockClasses.map((classItem) => classItem.progress),
+    classes.map((classItem) => classItem.progress),
   );
-  const students = useMemo(() => getStudentPreviewData(), []);
+  const students = useMemo(
+    () => getStudentPreviewData(classDetails),
+    [classDetails],
+  );
   const topStudents = [...students]
     .sort((a, b) => b.progress - a.progress)
     .slice(0, 3);
@@ -61,7 +77,7 @@ export function TeacherDashboard() {
               <StatsCard
                 icon={BookOpen}
                 label="Total classes"
-                value={mockClasses.length}
+                value={classes.length}
               />
               <StatsCard
                 icon={Users}
@@ -71,7 +87,7 @@ export function TeacherDashboard() {
               <StatsCard
                 icon={ListChecks}
                 label="Total word sets"
-                value={mockWordSetSummaries.length}
+                value={wordSets.length}
               />
               <StatsCard
                 icon={BarChart3}
@@ -88,7 +104,7 @@ export function TeacherDashboard() {
                 <CardContent className="px-4 pb-4">
                   <div className="max-h-[260px] overflow-y-auto rounded-lg border">
                     <div className="divide-y">
-                      {mockClassDetails.slice(0, 3).map((classItem) => (
+                      {analytics.classProgress.slice(0, 3).map((classItem) => (
                         <ClassProgressRow
                           key={classItem.id}
                           classItem={classItem}
@@ -235,8 +251,8 @@ function StudentsPreview({
   );
 }
 
-function getStudentPreviewData(): StudentPreview[] {
-  return mockClassDetails.flatMap((classItem) =>
+function getStudentPreviewData(classDetails: MockClassDetails[]): StudentPreview[] {
+  return classDetails.flatMap((classItem) =>
     classItem.studentsList.map((student) => ({
       ...student,
       className: classItem.name,

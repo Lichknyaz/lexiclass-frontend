@@ -65,6 +65,10 @@ export const classesService = {
     return clone(mockClasses);
   },
 
+  async listClassDetails(): Promise<MockClassDetails[]> {
+    return clone(mockClassDetails);
+  },
+
   async getClassDetails(id: string): Promise<MockClassDetails | undefined> {
     return clone(getMockClassDetails(id));
   },

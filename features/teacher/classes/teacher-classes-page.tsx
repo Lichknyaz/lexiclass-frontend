@@ -16,11 +16,16 @@ import { ClassCard, type ClassData } from "@/components/dashboard/class-card";
 import { CreateClassDialog } from "@/components/dashboard/create-class-dialog";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClasses } from "@/mock/mock-data";
 
-export function TeacherClassesPage() {
+interface TeacherClassesPageProps {
+  initialClasses: ClassData[];
+}
+
+export function TeacherClassesPage({
+  initialClasses,
+}: TeacherClassesPageProps) {
   const router = useRouter();
-  const [classes, setClasses] = useState<ClassData[]>(mockClasses);
+  const [classes, setClasses] = useState<ClassData[]>(initialClasses);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const handleCreateClass = (className: string) => {

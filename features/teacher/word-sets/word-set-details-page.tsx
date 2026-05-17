@@ -58,7 +58,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClasses } from "@/mock/mock-data";
 import type {
   MockClassSummary,
   MockWord,
@@ -68,12 +67,14 @@ import { getAverage } from "@/utils";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;
+  classes: MockClassSummary[];
   backHref: string;
   backLabel: string;
 }
 
 export function WordSetDetailsPage({
   wordSet,
+  classes,
   backHref,
   backLabel,
 }: WordSetDetailsPageProps) {
@@ -97,7 +98,7 @@ export function WordSetDetailsPage({
   });
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
   const [assignedClasses, setAssignedClasses] = useState<MockClassSummary[]>(
-    mockClasses.filter((classItem) => classItem.id === wordSet.classId),
+    classes.filter((classItem) => classItem.id === wordSet.classId),
   );
 
   const averageMastery = getAverage(words.map((word) => word.masteryLevel));
@@ -115,7 +116,7 @@ export function WordSetDetailsPage({
   const allFilteredWordsSelected =
     filteredWordIds.length > 0 &&
     filteredWordIds.every((wordId) => selectedWordIds.includes(wordId));
-  const availableClasses = mockClasses.filter(
+  const availableClasses = classes.filter(
     (classItem) =>
       !assignedClasses.some(
         (assignedClass) => assignedClass.id === classItem.id,

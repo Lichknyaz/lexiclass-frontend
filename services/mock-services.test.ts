@@ -11,9 +11,11 @@ import {
 describe("mock domain services", () => {
   it("loads teacher class summaries and class details", async () => {
     const classes = await classesService.listClasses();
+    const detailsList = await classesService.listClassDetails();
     const details = await classesService.getClassDetails(classes[0].id);
 
     assert.ok(classes.length > 0);
+    assert.equal(detailsList.length, classes.length);
     assert.equal(details?.id, classes[0].id);
     assert.ok(details?.inviteCode);
   });

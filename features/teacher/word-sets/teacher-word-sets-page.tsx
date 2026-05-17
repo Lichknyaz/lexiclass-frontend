@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/empty";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockWordSetSummaries } from "@/mock/mock-data";
+import type { MockWordSetSummary } from "@/types/mock";
 
-export function TeacherWordSetsPage() {
-  const wordSets = mockWordSetSummaries;
+interface TeacherWordSetsPageProps {
+  wordSets: MockWordSetSummary[];
+}
 
+export function TeacherWordSetsPage({ wordSets }: TeacherWordSetsPageProps) {
   return (
     <div className="flex h-screen">
       <Sidebar className="hidden lg:flex" />

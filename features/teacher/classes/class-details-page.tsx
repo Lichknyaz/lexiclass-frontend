@@ -58,7 +58,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockWordSetSummaries } from "@/mock/mock-data";
 import {
   type MockClassDetails,
   type MockStudent,
@@ -69,9 +68,13 @@ import { getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;
+  wordSetSummaries: MockWordSetSummary[];
 }
 
-export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
+export function ClassDetailsPage({
+  classDetails,
+  wordSetSummaries,
+}: ClassDetailsPageProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -104,7 +107,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     [studentFilter, students],
   );
 
-  const availableWordSets = mockWordSetSummaries.filter(
+  const availableWordSets = wordSetSummaries.filter(
     (wordSet) =>
       !assignedWordSets.some(
         (assignedWordSet) =>
