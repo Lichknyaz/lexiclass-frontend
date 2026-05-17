@@ -1,4 +1,13 @@
 export {
+  AUTH_STORAGE_KEY,
+  authService,
+  createAuthService,
+  type AuthService,
+  type AuthStorage,
+  type LoginInput,
+  type RegisterInput,
+} from "./auth-service";
+export {
   ApiError,
   createApiClient,
   joinUrl,

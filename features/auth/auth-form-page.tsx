@@ -8,13 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  createLocalUser,
-  getRoleHome,
-  getStoredUser,
-  storeUser,
-  type UserRole,
-} from "@/features/auth/auth-session";
+import { getRoleHome, type UserRole } from "@/features/auth/auth-session";
+import { authService } from "@/services";
 import { cn } from "@/utils";
 
 type AuthMode = "login" | "register";
@@ -32,27 +27,33 @@ export function AuthFormPage({ mode }: AuthFormPageProps) {
   const [role, setRole] = useState<UserRole>("teacher");
 
   useEffect(() => {
-    const user = getStoredUser();
-
-    if (user) {
-      router.replace(getRoleHome(user.role));
-    }
+    void authService.getCurrentUser().then((user) => {
+      if (user) {
+        router.replace(getRoleHome(user.role));
+      }
+    });
   }, [router]);
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!email.trim() || !password.trim() || (isRegister && !name.trim())) {
       return;
     }
 
-    const user = createLocalUser({
-      name: isRegister ? name : "",
-      email,
-      role,
-    });
+    const user = isRegister
+      ? await authService.register({
+          name,
+          email,
+          password,
+          role,
+        })
+      : await authService.login({
+          email,
+          password,
+          role,
+        });
 
-    storeUser(user);
     router.replace(getRoleHome(user.role));
   };
 

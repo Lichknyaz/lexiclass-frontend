@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { BookOpenCheck } from "lucide-react";
 import {
   getRouteAccessDecision,
-  getStoredUser,
   type UserRole,
 } from "@/features/auth/auth-session";
+import { authService } from "@/services";
 
 interface AuthGuardProps {
   requiredRole: UserRole;
@@ -19,14 +19,16 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const decision = getRouteAccessDecision(getStoredUser(), requiredRole);
+    void authService.getCurrentUser().then((user) => {
+      const decision = getRouteAccessDecision(user, requiredRole);
 
-    if (!decision.allowed) {
-      router.replace(decision.redirectTo);
-      return;
-    }
+      if (!decision.allowed) {
+        router.replace(decision.redirectTo);
+        return;
+      }
 
-    setAllowed(true);
+      setAllowed(true);
+    });
   }, [requiredRole, router]);
 
   if (!allowed) {
