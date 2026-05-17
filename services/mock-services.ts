@@ -17,6 +17,7 @@ import type {
   MockStudentClass,
   MockStudentProgressWord,
   MockStudentWordSet,
+  MockWord,
   MockWordSet,
   MockWordSetDetails,
   MockWordSetSummary,
@@ -39,6 +40,27 @@ export interface StudentInput {
 }
 
 export interface StudentProfileInput extends StudentInput {
+  id: string;
+}
+
+export interface CreateWordSetInput {
+  title: string;
+  description: string;
+}
+
+export interface WordSetOverviewInput {
+  title: string;
+  description: string;
+  tag: string;
+}
+
+export interface WordInput {
+  term: string;
+  translation: string;
+  exampleSentence: string;
+}
+
+export interface WordProfileInput extends WordInput {
   id: string;
 }
 
@@ -199,6 +221,102 @@ export const wordSetsService = {
   ): Promise<MockWordSetDetails | undefined> {
     return clone(getMockWordSetDetails(id));
   },
+
+  async createWordSet(
+    input: CreateWordSetInput,
+  ): Promise<MockWordSetSummary> {
+    return {
+      id: `local-word-set-${Date.now()}`,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      words: 0,
+      assignedClasses: 0,
+    };
+  },
+
+  async updateWordSetOverview(
+    id: string,
+    input: WordSetOverviewInput,
+  ): Promise<MockWordSetDetails> {
+    const wordSet = getRequiredWordSetDetails(id);
+
+    return {
+      ...wordSet,
+      title: input.title.trim(),
+      description: input.description.trim(),
+      className: input.tag.trim(),
+    };
+  },
+
+  async deleteWordSet(id: string): Promise<{ id: string }> {
+    getRequiredWordSetDetails(id);
+
+    return { id };
+  },
+
+  async assignToClass(
+    wordSetId: string,
+    classItem: MockClassSummary,
+  ): Promise<MockClassSummary> {
+    getRequiredWordSetDetails(wordSetId);
+
+    return clone(classItem);
+  },
+
+  async addWords(
+    wordSetId: string,
+    input: WordInput[],
+  ): Promise<MockWord[]> {
+    getRequiredWordSetDetails(wordSetId);
+
+    return input.map((word, index) => ({
+      id: `local-word-${Date.now()}-${index}`,
+      term: word.term.trim(),
+      translation: word.translation.trim(),
+      exampleSentence: word.exampleSentence.trim(),
+      masteryLevel: 0,
+      correctAnswers: 0,
+      wrongAnswers: 0,
+    }));
+  },
+
+  async updateWord(
+    wordSetId: string,
+    input: WordProfileInput,
+  ): Promise<MockWord> {
+    const wordSet = getRequiredWordSetDetails(wordSetId);
+    const existingWord = wordSet.wordsList.find((word) => word.id === input.id);
+
+    return {
+      ...(existingWord ?? {
+        masteryLevel: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+      }),
+      id: input.id,
+      term: input.term.trim(),
+      translation: input.translation.trim(),
+      exampleSentence: input.exampleSentence.trim(),
+    };
+  },
+
+  async deleteWord(
+    wordSetId: string,
+    wordId: string,
+  ): Promise<{ wordId: string }> {
+    getRequiredWordSetDetails(wordSetId);
+
+    return { wordId };
+  },
+
+  async deleteWords(
+    wordSetId: string,
+    wordIds: string[],
+  ): Promise<{ wordIds: string[] }> {
+    getRequiredWordSetDetails(wordSetId);
+
+    return { wordIds };
+  },
 };
 
 export const studentService = {
@@ -330,6 +448,16 @@ function getRequiredClassDetails(id: string) {
   }
 
   return clone(classDetails);
+}
+
+function getRequiredWordSetDetails(id: string) {
+  const wordSet = getMockWordSetDetails(id);
+
+  if (!wordSet) {
+    throw new Error("Word set not found");
+  }
+
+  return clone(wordSet);
 }
 
 function clone<T>(value: T): T {

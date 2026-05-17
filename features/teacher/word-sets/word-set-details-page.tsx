@@ -63,6 +63,7 @@ import type {
   MockWord,
   MockWordSetDetails,
 } from "@/types/mock";
+import { wordSetsService } from "@/services";
 import { getAverage } from "@/utils";
 
 interface WordSetDetailsPageProps {
@@ -123,52 +124,51 @@ export function WordSetDetailsPage({
       ),
   );
 
-  const handleAssignClass = (classItem: MockClassSummary) => {
-    setAssignedClasses((currentClasses) => [...currentClasses, classItem]);
+  const handleAssignClass = async (classItem: MockClassSummary) => {
+    const assignedClass = await wordSetsService.assignToClass(
+      wordSet.id,
+      classItem,
+    );
+
+    setAssignedClasses((currentClasses) => [...currentClasses, assignedClass]);
     setAssignDialogOpen(false);
   };
 
-  const handleAddWords = (newWords: NewWordInput[]) => {
+  const handleAddWords = async (newWords: NewWordInput[]) => {
+    const addedWords = await wordSetsService.addWords(wordSet.id, newWords);
+
     setWords((currentWords) => [
       ...currentWords,
-      ...newWords.map((word, index) => ({
-        id: `${Date.now()}-${index}`,
-        term: word.term,
-        translation: word.translation,
-        exampleSentence: word.exampleSentence,
-        masteryLevel: 0,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-      })),
+      ...addedWords,
     ]);
   };
 
-  const handleUpdateWord = (updatedWord: WordInput) => {
+  const handleUpdateWord = async (updatedWord: WordInput) => {
+    const savedWord = await wordSetsService.updateWord(wordSet.id, updatedWord);
+
     setWords((currentWords) =>
       currentWords.map((word) =>
-        word.id === updatedWord.id
-          ? {
-              ...word,
-              term: updatedWord.term,
-              translation: updatedWord.translation,
-              exampleSentence: updatedWord.exampleSentence,
-            }
-          : word,
+        word.id === savedWord.id ? savedWord : word,
       ),
     );
     setEditWordDialogWord(null);
   };
 
-  const handleDeleteWord = () => {
+  const handleDeleteWord = async () => {
     if (!deleteWordDialogWord) {
       return;
     }
 
+    const deletedWord = await wordSetsService.deleteWord(
+      wordSet.id,
+      deleteWordDialogWord.id,
+    );
+
     setWords((currentWords) =>
-      currentWords.filter((word) => word.id !== deleteWordDialogWord.id),
+      currentWords.filter((word) => word.id !== deletedWord.wordId),
     );
     setSelectedWordIds((currentIds) =>
-      currentIds.filter((wordId) => wordId !== deleteWordDialogWord.id),
+      currentIds.filter((wordId) => wordId !== deletedWord.wordId),
     );
     setDeleteWordDialogWord(null);
   };
@@ -191,19 +191,36 @@ export function WordSetDetailsPage({
     });
   };
 
-  const handleDeleteSelectedWords = () => {
+  const handleDeleteSelectedWords = async () => {
+    const deletedWords = await wordSetsService.deleteWords(
+      wordSet.id,
+      selectedWordIds,
+    );
+
     setWords((currentWords) =>
-      currentWords.filter((word) => !selectedWordIds.includes(word.id)),
+      currentWords.filter((word) => !deletedWords.wordIds.includes(word.id)),
     );
     setSelectedWordIds([]);
   };
 
-  const handleUpdateWordSetOverview = (overview: WordSetOverviewInput) => {
-    setWordSetOverview(overview);
+  const handleUpdateWordSetOverview = async (
+    overview: WordSetOverviewInput,
+  ) => {
+    const updatedWordSet = await wordSetsService.updateWordSetOverview(
+      wordSet.id,
+      overview,
+    );
+
+    setWordSetOverview({
+      title: updatedWordSet.title,
+      description: updatedWordSet.description,
+      tag: updatedWordSet.className,
+    });
     setEditDialogOpen(false);
   };
 
-  const handleDeleteWordSet = () => {
+  const handleDeleteWordSet = async () => {
+    await wordSetsService.deleteWordSet(wordSet.id);
     setDeleteDialogOpen(false);
     router.push("/teacher/word-sets");
   };

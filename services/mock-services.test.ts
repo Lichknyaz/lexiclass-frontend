@@ -86,6 +86,63 @@ describe("mock domain services", () => {
     assert.ok(studentSets.length > 0);
   });
 
+  it("creates, updates, and deletes word sets", async () => {
+    const created = await wordSetsService.createWordSet({
+      title: "Phrasal verbs",
+      description: "Common classroom phrasal verbs.",
+    });
+    const updated = await wordSetsService.updateWordSetOverview("w1", {
+      title: "Updated routines",
+      description: "Updated description",
+      tag: "A2",
+    });
+    const deleted = await wordSetsService.deleteWordSet("w1");
+
+    assert.equal(created.title, "Phrasal verbs");
+    assert.equal(created.description, "Common classroom phrasal verbs.");
+    assert.equal(created.words, 0);
+    assert.equal(updated.title, "Updated routines");
+    assert.equal(updated.className, "A2");
+    assert.deepEqual(deleted, { id: "w1" });
+  });
+
+  it("assigns a word set to a class", async () => {
+    const assigned = await wordSetsService.assignToClass("w1", {
+      id: "2",
+      name: "English B1",
+      students: 8,
+      wordSets: 3,
+      progress: 74,
+    });
+
+    assert.equal(assigned.id, "2");
+    assert.equal(assigned.name, "English B1");
+  });
+
+  it("adds, updates, and deletes words in a word set", async () => {
+    const added = await wordSetsService.addWords("w1", [
+      {
+        term: "look up",
+        translation: "search for information",
+        exampleSentence: "Look up this word in a dictionary.",
+      },
+    ]);
+    const updated = await wordSetsService.updateWord("w1", {
+      id: added[0].id,
+      term: "look after",
+      translation: "take care of",
+      exampleSentence: "She looks after her brother.",
+    });
+    const deleted = await wordSetsService.deleteWord("w1", added[0].id);
+    const bulkDeleted = await wordSetsService.deleteWords("w1", ["word-1", "word-2"]);
+
+    assert.equal(added.length, 1);
+    assert.equal(added[0].masteryLevel, 0);
+    assert.equal(updated.term, "look after");
+    assert.deepEqual(deleted, { wordId: added[0].id });
+    assert.deepEqual(bulkDeleted, { wordIds: ["word-1", "word-2"] });
+  });
+
   it("accepts the known mock invite code", async () => {
     const joined = await studentService.joinClass("a2-7kq9");
 
