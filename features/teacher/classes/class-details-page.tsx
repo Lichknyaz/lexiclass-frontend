@@ -610,7 +610,6 @@ interface ProblemWordsCardProps {
 function ProblemWordsCard({
   problemWords,
   totalWrongAnswers,
-  onReview,
 }: ProblemWordsCardProps) {
   return (
     <Card id="problem-words">
