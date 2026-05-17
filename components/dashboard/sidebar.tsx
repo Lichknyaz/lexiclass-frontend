@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, BarChart3, LayoutDashboard, LogOut, List } from "lucide-react";
+import { BookOpen, BarChart3, LayoutDashboard, List } from "lucide-react";
+import { LogoutButton } from "@/features/auth/logout-button";
 import { cn } from "@/utils";
 
 interface SidebarProps {
@@ -58,10 +59,7 @@ export function Sidebar({ className }: SidebarProps) {
       </nav>
 
       <div className="border-t p-4">
-        <button className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-          <LogOut className="size-5" />
-          Logout
-        </button>
+        <LogoutButton className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
       </div>
     </aside>
   );
