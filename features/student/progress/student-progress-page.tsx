@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Target, TrendingDown, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,9 +16,22 @@ import {
 } from "@/components/ui/table";
 import { StudentShell } from "@/components/student/student-shell";
 import { mockStudentProgressWords } from "@/mock/mock-data";
+import type { MockStudentProgressWord } from "@/types/mock";
 import { getAverage } from "@/utils";
 
+type ProgressWordFilter = "all" | "weak" | "learned";
+
+const progressWordFilterOptions: Array<{
+  label: string;
+  value: ProgressWordFilter;
+}> = [
+  { label: "All", value: "all" },
+  { label: "Weak", value: "weak" },
+  { label: "Learned", value: "learned" },
+];
+
 export function StudentProgressPage() {
+  const [wordFilter, setWordFilter] = useState<ProgressWordFilter>("all");
   const totalWordsPracticed = mockStudentProgressWords.length;
   const correctAnswers = mockStudentProgressWords.reduce(
     (total, word) => total + word.correctCount,
@@ -30,6 +46,9 @@ export function StudentProgressPage() {
   );
   const weakWords = mockStudentProgressWords.filter(
     (word) => word.masteryLevel < 60,
+  );
+  const filteredWords = mockStudentProgressWords.filter((word) =>
+    matchesProgressWordFilter(word, wordFilter),
   );
 
   return (
@@ -61,8 +80,21 @@ export function StudentProgressPage() {
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Word Progress</CardTitle>
+              <div className="flex flex-wrap gap-2">
+                {progressWordFilterOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    size="sm"
+                    variant={wordFilter === option.value ? "default" : "outline"}
+                    onClick={() => setWordFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -76,7 +108,7 @@ export function StudentProgressPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockStudentProgressWords.map((word) => (
+                  {filteredWords.map((word) => (
                     <TableRow key={word.id}>
                       <TableCell className="font-medium">{word.term}</TableCell>
                       <TableCell>{word.translation}</TableCell>
@@ -101,12 +133,21 @@ export function StudentProgressPage() {
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Weak Words</CardTitle>
+              <Button size="sm" asChild>
+                <Link href="/student/word-sets/1-w1/practice?mode=weak">
+                  Practice weak words
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {weakWords.map((word) => (
-                <div key={word.id} className="rounded-lg border p-3">
+                <Link
+                  key={word.id}
+                  href="/student/word-sets/1-w1/practice?mode=weak"
+                  className="rounded-lg border p-3 transition-colors hover:bg-muted/40"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-medium">{word.term}</div>
@@ -126,7 +167,7 @@ export function StudentProgressPage() {
                     value={word.masteryLevel}
                     className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
                   />
-                </div>
+                </Link>
               ))}
             </CardContent>
           </Card>
@@ -134,6 +175,21 @@ export function StudentProgressPage() {
       </div>
     </StudentShell>
   );
+}
+
+function matchesProgressWordFilter(
+  word: MockStudentProgressWord,
+  filter: ProgressWordFilter,
+) {
+  if (filter === "weak") {
+    return word.masteryLevel < 60;
+  }
+
+  if (filter === "learned") {
+    return word.masteryLevel >= 80;
+  }
+
+  return true;
 }
 
 interface SummaryCardProps {
