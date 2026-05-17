@@ -16,13 +16,18 @@ import {
 } from "@/components/ui/empty";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
-import { getMockStudentWordSets, mockStudentClasses } from "@/mock/mock-data";
-import type { MockStudentWordSet } from "@/types/mock";
+import type { MockStudentClass, MockStudentWordSet } from "@/types/mock";
 import { getAverage } from "@/utils";
 
-export function StudentDashboardPage() {
-  const assignedWordSets = getMockStudentWordSets();
-  const joinedClasses = mockStudentClasses;
+interface StudentDashboardPageProps {
+  joinedClasses: MockStudentClass[];
+  assignedWordSets: MockStudentWordSet[];
+}
+
+export function StudentDashboardPage({
+  joinedClasses,
+  assignedWordSets,
+}: StudentDashboardPageProps) {
   const hasJoinedClasses = joinedClasses.length > 0;
   const hasAssignedWordSets = assignedWordSets.length > 0;
   const [wordSetFilter, setWordSetFilter] = useState<WordSetFilter>("all");

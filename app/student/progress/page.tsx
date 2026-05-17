@@ -1,5 +1,8 @@
 import { StudentProgressPage } from "@/features/student/progress/student-progress-page";
+import { studentService } from "@/services";
 
-export default function StudentProgressRoute() {
-  return <StudentProgressPage />;
+export default async function StudentProgressRoute() {
+  const progressWords = await studentService.listProgressWords();
+
+  return <StudentProgressPage progressWords={progressWords} />;
 }

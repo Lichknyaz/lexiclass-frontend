@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { WordSetDetailsPage } from "@/features/teacher/word-sets/word-set-details-page";
-import { getMockWordSetDetails } from "@/mock/mock-data";
+import { classesService, wordSetsService } from "@/services";
 
 interface TeacherWordSetPageProps {
   params: Promise<{
@@ -17,7 +17,10 @@ export default async function TeacherWordSetPage({
 }: TeacherWordSetPageProps) {
   const { id } = await params;
   const { from } = await searchParams;
-  const wordSet = getMockWordSetDetails(id);
+  const [wordSet, classes] = await Promise.all([
+    wordSetsService.getWordSetDetails(id),
+    classesService.listClasses(),
+  ]);
 
   if (!wordSet) {
     notFound();
@@ -32,6 +35,7 @@ export default async function TeacherWordSetPage({
   return (
     <WordSetDetailsPage
       wordSet={wordSet}
+      classes={classes}
       backHref={backHref}
       backLabel={backLabel}
     />

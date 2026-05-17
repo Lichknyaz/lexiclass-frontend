@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { clearStoredUser } from "@/features/auth/auth-session";
+import { authService } from "@/services";
 
 interface LogoutButtonProps {
   className?: string;
@@ -12,8 +12,8 @@ interface LogoutButtonProps {
 export function LogoutButton({ className, onLogout }: LogoutButtonProps) {
   const router = useRouter();
 
-  const handleLogout = () => {
-    clearStoredUser();
+  const handleLogout = async () => {
+    await authService.logout();
     onLogout?.();
     router.replace("/login");
   };

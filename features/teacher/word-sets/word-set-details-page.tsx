@@ -58,22 +58,25 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClasses } from "@/mock/mock-data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type {
   MockClassSummary,
   MockWord,
   MockWordSetDetails,
 } from "@/types/mock";
-import { getAverage } from "@/utils";
+import { wordSetsService } from "@/services";
+import { getAverage, getErrorMessage } from "@/utils";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;
+  classes: MockClassSummary[];
   backHref: string;
   backLabel: string;
 }
 
 export function WordSetDetailsPage({
   wordSet,
+  classes,
   backHref,
   backLabel,
 }: WordSetDetailsPageProps) {
@@ -90,6 +93,8 @@ export function WordSetDetailsPage({
     useState<MockWord | null>(null);
   const [wordFilter, setWordFilter] = useState<WordFilter>("all");
   const [selectedWordIds, setSelectedWordIds] = useState<string[]>([]);
+  const [actionError, setActionError] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [wordSetOverview, setWordSetOverview] = useState({
     title: wordSet.title,
     description: wordSet.description,
@@ -97,7 +102,7 @@ export function WordSetDetailsPage({
   });
   const [words, setWords] = useState<MockWord[]>(wordSet.wordsList);
   const [assignedClasses, setAssignedClasses] = useState<MockClassSummary[]>(
-    mockClasses.filter((classItem) => classItem.id === wordSet.classId),
+    classes.filter((classItem) => classItem.id === wordSet.classId),
   );
 
   const averageMastery = getAverage(words.map((word) => word.masteryLevel));
@@ -115,61 +120,101 @@ export function WordSetDetailsPage({
   const allFilteredWordsSelected =
     filteredWordIds.length > 0 &&
     filteredWordIds.every((wordId) => selectedWordIds.includes(wordId));
-  const availableClasses = mockClasses.filter(
+  const availableClasses = classes.filter(
     (classItem) =>
       !assignedClasses.some(
         (assignedClass) => assignedClass.id === classItem.id,
       ),
   );
 
-  const handleAssignClass = (classItem: MockClassSummary) => {
-    setAssignedClasses((currentClasses) => [...currentClasses, classItem]);
-    setAssignDialogOpen(false);
+  const handleAssignClass = async (classItem: MockClassSummary) => {
+    setPendingAction("assign-class");
+    setActionError("");
+
+    try {
+      const assignedClass = await wordSetsService.assignToClass(
+        wordSet.id,
+        classItem,
+      );
+
+      setAssignedClasses((currentClasses) => [
+        ...currentClasses,
+        assignedClass,
+      ]);
+      setAssignDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not assign word set"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleAddWords = (newWords: NewWordInput[]) => {
-    setWords((currentWords) => [
-      ...currentWords,
-      ...newWords.map((word, index) => ({
-        id: `${Date.now()}-${index}`,
-        term: word.term,
-        translation: word.translation,
-        exampleSentence: word.exampleSentence,
-        masteryLevel: 0,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-      })),
-    ]);
+  const handleAddWords = async (newWords: NewWordInput[]) => {
+    setPendingAction("add-words");
+    setActionError("");
+
+    try {
+      const addedWords = await wordSetsService.addWords(wordSet.id, newWords);
+
+      setWords((currentWords) => [...currentWords, ...addedWords]);
+      setAddWordDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not add words"));
+      throw error;
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleUpdateWord = (updatedWord: WordInput) => {
-    setWords((currentWords) =>
-      currentWords.map((word) =>
-        word.id === updatedWord.id
-          ? {
-              ...word,
-              term: updatedWord.term,
-              translation: updatedWord.translation,
-              exampleSentence: updatedWord.exampleSentence,
-            }
-          : word,
-      ),
-    );
-    setEditWordDialogWord(null);
+  const handleUpdateWord = async (updatedWord: WordInput) => {
+    setPendingAction("update-word");
+    setActionError("");
+
+    try {
+      const savedWord = await wordSetsService.updateWord(
+        wordSet.id,
+        updatedWord,
+      );
+
+      setWords((currentWords) =>
+        currentWords.map((word) =>
+          word.id === savedWord.id ? savedWord : word,
+        ),
+      );
+      setEditWordDialogWord(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update word"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleDeleteWord = () => {
+  const handleDeleteWord = async () => {
     if (!deleteWordDialogWord) {
       return;
     }
 
-    setWords((currentWords) =>
-      currentWords.filter((word) => word.id !== deleteWordDialogWord.id),
-    );
-    setSelectedWordIds((currentIds) =>
-      currentIds.filter((wordId) => wordId !== deleteWordDialogWord.id),
-    );
-    setDeleteWordDialogWord(null);
+    setPendingAction("delete-word");
+    setActionError("");
+
+    try {
+      const deletedWord = await wordSetsService.deleteWord(
+        wordSet.id,
+        deleteWordDialogWord.id,
+      );
+
+      setWords((currentWords) =>
+        currentWords.filter((word) => word.id !== deletedWord.wordId),
+      );
+      setSelectedWordIds((currentIds) =>
+        currentIds.filter((wordId) => wordId !== deletedWord.wordId),
+      );
+      setDeleteWordDialogWord(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not delete word"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleToggleWord = (wordId: string, checked: boolean) => {
@@ -190,21 +235,65 @@ export function WordSetDetailsPage({
     });
   };
 
-  const handleDeleteSelectedWords = () => {
-    setWords((currentWords) =>
-      currentWords.filter((word) => !selectedWordIds.includes(word.id)),
-    );
-    setSelectedWordIds([]);
+  const handleDeleteSelectedWords = async () => {
+    setPendingAction("delete-selected-words");
+    setActionError("");
+
+    try {
+      const deletedWords = await wordSetsService.deleteWords(
+        wordSet.id,
+        selectedWordIds,
+      );
+
+      setWords((currentWords) =>
+        currentWords.filter((word) => !deletedWords.wordIds.includes(word.id)),
+      );
+      setSelectedWordIds([]);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not delete selected words"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleUpdateWordSetOverview = (overview: WordSetOverviewInput) => {
-    setWordSetOverview(overview);
-    setEditDialogOpen(false);
+  const handleUpdateWordSetOverview = async (
+    overview: WordSetOverviewInput,
+  ) => {
+    setPendingAction("update-word-set");
+    setActionError("");
+
+    try {
+      const updatedWordSet = await wordSetsService.updateWordSetOverview(
+        wordSet.id,
+        overview,
+      );
+
+      setWordSetOverview({
+        title: updatedWordSet.title,
+        description: updatedWordSet.description,
+        tag: updatedWordSet.className,
+      });
+      setEditDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update word set"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleDeleteWordSet = () => {
-    setDeleteDialogOpen(false);
-    router.push("/teacher/word-sets");
+  const handleDeleteWordSet = async () => {
+    setPendingAction("delete-word-set");
+    setActionError("");
+
+    try {
+      await wordSetsService.deleteWordSet(wordSet.id);
+      setDeleteDialogOpen(false);
+      router.push("/teacher/word-sets");
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not delete word set"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   return (
@@ -233,6 +322,18 @@ export function WordSetDetailsPage({
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="flex flex-col gap-4">
+            {actionError && (
+              <Alert variant="destructive">
+                <AlertTitle>Action failed</AlertTitle>
+                <AlertDescription>{actionError}</AlertDescription>
+              </Alert>
+            )}
+            {pendingAction && (
+              <div className="text-sm text-muted-foreground">
+                Saving changes...
+              </div>
+            )}
+
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
               <Card>
                 <CardHeader className="pb-3">
@@ -346,9 +447,12 @@ export function WordSetDetailsPage({
                         size="sm"
                         variant="destructive"
                         onClick={handleDeleteSelectedWords}
+                        disabled={pendingAction === "delete-selected-words"}
                       >
                         <Trash2 className="size-4" />
-                        Delete selected
+                        {pendingAction === "delete-selected-words"
+                          ? "Deleting..."
+                          : "Delete selected"}
                       </Button>
                     </div>
                   )}
@@ -692,7 +796,7 @@ function AssignClassDialog({
 interface AddWordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddWords: (words: NewWordInput[]) => void;
+  onAddWords: (words: NewWordInput[]) => Promise<void>;
 }
 
 function AddWordDialog({
@@ -704,41 +808,53 @@ function AddWordDialog({
   const [translation, setTranslation] = useState("");
   const [exampleSentence, setExampleSentence] = useState("");
   const [bulkInput, setBulkInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const parsedBulkWords = useMemo(
     () => parseBulkWordInput(bulkInput),
     [bulkInput],
   );
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (parsedBulkWords.length > 0) {
-      onAddWords(parsedBulkWords);
+    const wordsToAdd =
+      parsedBulkWords.length > 0
+        ? parsedBulkWords
+        : term.trim() && translation.trim()
+          ? [
+              {
+                term: term.trim(),
+                translation: translation.trim(),
+                exampleSentence: exampleSentence.trim(),
+              },
+            ]
+          : [];
+
+    if (wordsToAdd.length === 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      await onAddWords(wordsToAdd);
       setBulkInput("");
       setTerm("");
       setTranslation("");
       setExampleSentence("");
-      onOpenChange(false);
-      return;
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Could not add words"));
+    } finally {
+      setIsSubmitting(false);
     }
-
-    if (!term.trim() || !translation.trim()) {
-      return;
-    }
-
-    onAddWords([
-      {
-        term: term.trim(),
-        translation: translation.trim(),
-        exampleSentence: exampleSentence.trim(),
-      },
-    ]);
-    setTerm("");
-    setTranslation("");
-    setExampleSentence("");
-    onOpenChange(false);
   };
+
+  const canSubmit =
+    parsedBulkWords.length > 0 ||
+    Boolean(term.trim() && translation.trim());
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -752,6 +868,11 @@ function AddWordDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-6">
+            {errorMessage && (
+              <div className="rounded-lg border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
             <Field>
               <FieldLabel htmlFor="word-term">Term</FieldLabel>
               <Input
@@ -829,12 +950,9 @@ function AddWordDialog({
             </Button>
             <Button
               type="submit"
-              disabled={
-                parsedBulkWords.length === 0 &&
-                (!term.trim() || !translation.trim())
-              }
+              disabled={!canSubmit || isSubmitting}
             >
-              Add Word
+              {isSubmitting ? "Adding..." : "Add Word"}
             </Button>
           </DialogFooter>
         </form>

@@ -3,14 +3,16 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BookOpenCheck } from "lucide-react";
-import { getRoleHome, getStoredUser } from "@/features/auth/auth-session";
+import { getRoleHome } from "@/features/auth/auth-session";
+import { authService } from "@/services";
 
 export function AuthRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const user = getStoredUser();
-    router.replace(user ? getRoleHome(user.role) : "/login");
+    void authService.getCurrentUser().then((user) => {
+      router.replace(user ? getRoleHome(user.role) : "/login");
+    });
   }, [router]);
 
   return (

@@ -58,20 +58,25 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockWordSetSummaries } from "@/mock/mock-data";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   type MockClassDetails,
   type MockStudent,
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
-import { getMistakeRate } from "@/utils";
+import { classesService } from "@/services";
+import { getErrorMessage, getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
   classDetails: MockClassDetails;
+  wordSetSummaries: MockWordSetSummary[];
 }
 
-export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
+export function ClassDetailsPage({
+  classDetails,
+  wordSetSummaries,
+}: ClassDetailsPageProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -85,6 +90,8 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
   const [removeStudentDialogStudent, setRemoveStudentDialogStudent] =
     useState<MockStudent | null>(null);
   const [studentFilter, setStudentFilter] = useState<StudentFilter>("all");
+  const [actionError, setActionError] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [classOverview, setClassOverview] = useState({
     name: classDetails.name,
     description: classDetails.description,
@@ -104,7 +111,7 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     [studentFilter, students],
   );
 
-  const availableWordSets = mockWordSetSummaries.filter(
+  const availableWordSets = wordSetSummaries.filter(
     (wordSet) =>
       !assignedWordSets.some(
         (assignedWordSet) =>
@@ -128,32 +135,67 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
     window.setTimeout(() => setCopied(false), 1600);
   };
 
-  const handleAssignWordSet = (wordSet: MockWordSetSummary) => {
-    const assignedWordSet: MockWordSet = {
-      id: `${classDetails.id}-${wordSet.id}`,
-      classId: classDetails.id,
-      title: wordSet.title,
-      description: wordSet.description,
-      words: wordSet.words,
-      assignedStudents: students.length,
-      averageProgress: 0,
-    };
+  const handleAssignWordSet = async (wordSet: MockWordSetSummary) => {
+    setPendingAction("assign-word-set");
+    setActionError("");
 
-    setAssignedWordSets((currentWordSets) => [
-      ...currentWordSets,
-      assignedWordSet,
-    ]);
-    setAssignDialogOpen(false);
+    try {
+      const assignedWordSet = await classesService.assignWordSet(
+        classDetails.id,
+        wordSet,
+      );
+
+      setAssignedWordSets((currentWordSets) => [
+        ...currentWordSets,
+        {
+          ...assignedWordSet,
+          assignedStudents: students.length,
+        },
+      ]);
+      setAssignDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not assign word set"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleUpdateClassOverview = (overview: ClassOverviewInput) => {
-    setClassOverview(overview);
-    setEditDialogOpen(false);
+  const handleUpdateClassOverview = async (overview: ClassOverviewInput) => {
+    setPendingAction("update-class");
+    setActionError("");
+
+    try {
+      const updatedClass = await classesService.updateClassOverview(
+        classDetails.id,
+        overview,
+      );
+
+      setClassOverview({
+        name: updatedClass.name,
+        description: updatedClass.description,
+        level: updatedClass.level,
+      });
+      setEditDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update class"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleDeleteClass = () => {
-    setDeleteDialogOpen(false);
-    router.push("/teacher/classes");
+  const handleDeleteClass = async () => {
+    setPendingAction("delete-class");
+    setActionError("");
+
+    try {
+      await classesService.deleteClass(classDetails.id);
+      setDeleteDialogOpen(false);
+      router.push("/teacher/classes");
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not delete class"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleReviewProblemWords = () => {
@@ -162,50 +204,73 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const handleAddStudent = (student: NewStudentInput) => {
-    const fallbackName = student.email.split("@")[0] || "New student";
+  const handleAddStudent = async (student: NewStudentInput) => {
+    setPendingAction("add-student");
+    setActionError("");
 
-    setStudents((currentStudents) => [
-      ...currentStudents,
-      {
-        id: Date.now().toString(),
-        name: student.name.trim() || fallbackName,
-        email: student.email.trim(),
-        progress: 0,
-        correctAnswers: 0,
-        wrongAnswers: 0,
-        lastPracticedAt: "Not practiced yet",
-      },
-    ]);
-    setInviteStudentDialogOpen(false);
+    try {
+      const addedStudent = await classesService.addStudent(
+        classDetails.id,
+        student,
+      );
+
+      setStudents((currentStudents) => [...currentStudents, addedStudent]);
+      setInviteStudentDialogOpen(false);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not add student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleUpdateStudent = (updatedStudent: StudentProfileInput) => {
-    setStudents((currentStudents) =>
-      currentStudents.map((student) =>
-        student.id === updatedStudent.id
-          ? {
-              ...student,
-              name: updatedStudent.name,
-              email: updatedStudent.email,
-            }
-          : student,
-      ),
-    );
-    setEditStudentDialogStudent(null);
+  const handleUpdateStudent = async (updatedStudent: StudentProfileInput) => {
+    setPendingAction("update-student");
+    setActionError("");
+
+    try {
+      const savedStudent = await classesService.updateStudent(
+        classDetails.id,
+        updatedStudent,
+      );
+
+      setStudents((currentStudents) =>
+        currentStudents.map((student) =>
+          student.id === savedStudent.id ? savedStudent : student,
+        ),
+      );
+      setEditStudentDialogStudent(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not update student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
-  const handleRemoveStudent = () => {
+  const handleRemoveStudent = async () => {
     if (!removeStudentDialogStudent) {
       return;
     }
 
-    setStudents((currentStudents) =>
-      currentStudents.filter(
-        (student) => student.id !== removeStudentDialogStudent.id,
-      ),
-    );
-    setRemoveStudentDialogStudent(null);
+    setPendingAction("remove-student");
+    setActionError("");
+
+    try {
+      const removedStudent = await classesService.removeStudent(
+        classDetails.id,
+        removeStudentDialogStudent.id,
+      );
+
+      setStudents((currentStudents) =>
+        currentStudents.filter(
+          (student) => student.id !== removedStudent.studentId,
+        ),
+      );
+      setRemoveStudentDialogStudent(null);
+    } catch (error) {
+      setActionError(getErrorMessage(error, "Could not remove student"));
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   return (
@@ -230,6 +295,18 @@ export function ClassDetailsPage({ classDetails }: ClassDetailsPageProps) {
 
         <main className="flex-1 overflow-auto p-4 lg:p-6">
           <div className="flex flex-col gap-4">
+            {actionError && (
+              <Alert variant="destructive">
+                <AlertTitle>Action failed</AlertTitle>
+                <AlertDescription>{actionError}</AlertDescription>
+              </Alert>
+            )}
+            {pendingAction && (
+              <div className="text-sm text-muted-foreground">
+                Saving changes...
+              </div>
+            )}
+
             <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
               <Card>
                 <CardHeader className="pb-3">

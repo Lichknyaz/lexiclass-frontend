@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { StudentShell } from "@/components/student/student-shell";
-import { getMockWordSetDetails } from "@/mock/mock-data";
+import { practiceService, type PracticeAttemptInput } from "@/services";
 import {
   type MockStudentWordSet,
   type MockWord,
@@ -42,18 +42,15 @@ const practiceModes: Array<{
 
 interface PracticePageProps {
   wordSet: MockStudentWordSet;
+  words: MockWord[];
 }
 
-export function PracticePage({ wordSet }: PracticePageProps) {
-  const allWords = useMemo(() => {
-    const teacherSet = getMockWordSetDetails(wordSet.id);
-    return teacherSet?.wordsList ?? getMockWordSetDetails("w1")?.wordsList ?? [];
-  }, [wordSet.id]);
-
+export function PracticePage({ wordSet, words: allWords }: PracticePageProps) {
   const [mode, setMode] = useState<PracticeMode>("flashcard");
   const [wordScope, setWordScope] = useState<WordScope>("all");
   const [started, setStarted] = useState(false);
   const [sessionWords, setSessionWords] = useState<MockWord[]>([]);
+  const [attempts, setAttempts] = useState<PracticeAttemptInput[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
@@ -62,6 +59,9 @@ export function PracticePage({ wordSet }: PracticePageProps) {
   const [writtenAnswer, setWrittenAnswer] = useState("");
   const [answerStatus, setAnswerStatus] = useState<AnswerStatus>(null);
   const [completed, setCompleted] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">(
+    "idle",
+  );
 
   const words = started ? sessionWords : getWordsByScope(allWords, wordScope);
   const currentWord = words[currentIndex];
@@ -85,7 +85,9 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     setCurrentIndex(0);
     setCorrectCount(0);
     setWrongCount(0);
+    setAttempts([]);
     setCompleted(false);
+    setSaveStatus("idle");
     resetQuestionState();
   };
 
@@ -97,7 +99,9 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     setCurrentIndex(0);
     setCorrectCount(0);
     setWrongCount(0);
+    setAttempts([]);
     setCompleted(false);
+    setSaveStatus("idle");
     resetQuestionState();
   };
 
@@ -110,7 +114,9 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     setCurrentIndex(0);
     setCorrectCount(0);
     setWrongCount(0);
+    setAttempts([]);
     setCompleted(false);
+    setSaveStatus("idle");
     resetQuestionState();
   };
 
@@ -119,20 +125,44 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     resetSession();
   };
 
-  const goToNextWord = () => {
-    if (!answerStatus) {
+  const completeSession = async (nextAttempts: PracticeAttemptInput[]) => {
+    setCompleted(true);
+
+    try {
+      await practiceService.savePracticeSession({
+        assignmentId: wordSet.id,
+        studentId: "local-student",
+        mode,
+        attempts: nextAttempts,
+      });
+      setSaveStatus("saved");
+    } catch {
+      setSaveStatus("error");
+    }
+  };
+
+  const goToNextWord = async () => {
+    if (!answerStatus || !currentWord) {
       return;
     }
 
-    setCorrectCount((value) =>
-      answerStatus === "correct" ? value + 1 : value,
-    );
-    setWrongCount((value) => (answerStatus === "wrong" ? value + 1 : value));
+    const correct = answerStatus === "correct";
+    const nextAttempts = [
+      ...attempts,
+      {
+        wordId: currentWord.id,
+        correct,
+      },
+    ];
+
+    setAttempts(nextAttempts);
+    setCorrectCount((value) => (correct ? value + 1 : value));
+    setWrongCount((value) => (correct ? value : value + 1));
 
     const lastQuestion = currentIndex >= words.length - 1;
 
     if (lastQuestion) {
-      setCompleted(true);
+      await completeSession(nextAttempts);
       return;
     }
 
@@ -144,7 +174,7 @@ export function PracticePage({ wordSet }: PracticePageProps) {
     const lastQuestion = currentIndex >= words.length - 1;
 
     if (lastQuestion) {
-      setCompleted(true);
+      void completeSession(attempts);
       return;
     }
 
@@ -253,6 +283,7 @@ export function PracticePage({ wordSet }: PracticePageProps) {
             correctCount={correctCount}
             wrongCount={wrongCount}
             words={words}
+            saveStatus={saveStatus}
             onPracticeWeakWords={startWeakWordsSession}
           />
         ) : (
@@ -584,6 +615,7 @@ interface ResultCardProps {
   correctCount: number;
   wrongCount: number;
   words: MockWord[];
+  saveStatus: "idle" | "saved" | "error";
   onPracticeWeakWords: () => void;
 }
 
@@ -591,6 +623,7 @@ function ResultCard({
   correctCount,
   wrongCount,
   words,
+  saveStatus,
   onPracticeWeakWords,
 }: ResultCardProps) {
   const totalWords = words.length;
@@ -612,6 +645,14 @@ function ResultCard({
           <ResultMetric label="Correct" value={correctCount} />
           <ResultMetric label="Wrong" value={wrongCount} destructive />
           <ResultMetric label="Accuracy" value={`${score}%`} />
+        </div>
+
+        <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          {saveStatus === "saved" &&
+            "Practice result saved for progress tracking."}
+          {saveStatus === "error" &&
+            "Practice finished, but the result could not be saved."}
+          {saveStatus === "idle" && "Preparing practice result..."}
         </div>
 
         <div className="rounded-lg border p-4">

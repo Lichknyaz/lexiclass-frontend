@@ -22,22 +22,26 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { mockClassDetails } from "@/mock/mock-data";
-import type { MockProblemWord } from "@/types/mock";
+import type { TeacherAnalytics } from "@/services";
+import type { MockClassDetails, MockProblemWord } from "@/types/mock";
 import { getAverage, getMistakeRate } from "@/utils";
 
-export function TeacherAnalyticsPage() {
+interface TeacherAnalyticsPageProps {
+  analytics: TeacherAnalytics;
+}
+
+export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
   const router = useRouter();
   const [selectedClassId, setSelectedClassId] = useState("all");
 
   const filteredClasses = useMemo(
     () =>
       selectedClassId === "all"
-        ? mockClassDetails
-        : mockClassDetails.filter(
+        ? analytics.classProgress
+        : analytics.classProgress.filter(
             (classItem) => classItem.id === selectedClassId,
           ),
-    [selectedClassId],
+    [analytics.classProgress, selectedClassId],
   );
   const problemWords = useMemo(
     () => getProblemWordsForClasses(filteredClasses),
@@ -73,7 +77,7 @@ export function TeacherAnalyticsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                {mockClassDetails.map((classItem) => (
+                {analytics.classProgress.map((classItem) => (
                   <SelectItem key={classItem.id} value={classItem.id}>
                     {classItem.name}
                   </SelectItem>
@@ -202,7 +206,7 @@ interface AnalyticsProblemWord extends MockProblemWord {
 }
 
 function getProblemWordsForClasses(
-  classes: typeof mockClassDetails,
+  classes: MockClassDetails[],
 ): AnalyticsProblemWord[] {
   return classes.flatMap((classItem) =>
     classItem.problemWords.map((word) => ({
