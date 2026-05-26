@@ -4,6 +4,7 @@ import {
   createLocalUser,
   getRoleHome,
   getRouteAccessDecision,
+  parseStoredSession,
   type AuthUser,
 } from "./auth-session.ts";
 
@@ -42,6 +43,38 @@ describe("auth-session", () => {
     assert.deepEqual(getRouteAccessDecision(user, "teacher"), {
       allowed: false,
       redirectTo: "/student/dashboard",
+    });
+  });
+
+  it("parses the persisted auth session shape", () => {
+    const user: AuthUser = createLocalUser({
+      name: "Teacher",
+      email: "teacher@example.com",
+      role: "teacher",
+    });
+
+    assert.deepEqual(
+      parseStoredSession({
+        user,
+        accessToken: "test-token",
+      }),
+      {
+        user,
+        accessToken: "test-token",
+      },
+    );
+  });
+
+  it("keeps legacy stored users readable during migration", () => {
+    const user: AuthUser = createLocalUser({
+      name: "Student",
+      email: "student@example.com",
+      role: "student",
+    });
+
+    assert.deepEqual(parseStoredSession(user), {
+      user,
+      accessToken: null,
     });
   });
 });
