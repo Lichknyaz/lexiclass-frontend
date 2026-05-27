@@ -31,6 +31,7 @@ export interface MockWord {
   term: string;
   translation: string;
   exampleSentence: string;
+  transcription?: string | null;
   masteryLevel: number;
   correctAnswers: number;
   wrongAnswers: number;

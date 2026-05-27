@@ -4,6 +4,8 @@ import type { MockClassDetails } from "../types/mock.ts";
 import type { ApiClient } from "./api-client.ts";
 import { createAssignmentsService } from "./assignments-service.ts";
 import { createClassesService } from "./classes-service.ts";
+import { createStudentService } from "./student-service.ts";
+import { createWordSetsService } from "./word-sets-service.ts";
 
 describe("backend domain services", () => {
   it("maps teacher class CRUD to backend endpoints", async () => {
@@ -201,6 +203,254 @@ describe("backend domain services", () => {
       averageProgress: 0,
     });
   });
+
+  it("maps teacher word-set CRUD to backend endpoints", async () => {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    const details = createWordSetDetails();
+    const service = createWordSetsService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          calls.push({ method: "GET", path });
+
+          if (path === "/teacher/word-sets") {
+            return [
+              {
+                id: "word-set-1",
+                title: "Travel vocabulary",
+                description: "Words for trips.",
+                words: 2,
+                assignedClasses: 1,
+              },
+            ];
+          }
+
+          return details;
+        },
+        post: async (path, body) => {
+          calls.push({ method: "POST", path, body });
+          return {
+            id: "word-set-2",
+            title: "Food vocabulary",
+            description: "Words for restaurants.",
+            words: 0,
+            assignedClasses: 0,
+          };
+        },
+        put: async (path, body) => {
+          calls.push({ method: "PUT", path, body });
+          return { ...details, title: "Updated travel" };
+        },
+        delete: async (path) => {
+          calls.push({ method: "DELETE", path });
+          return { id: "word-set-1" };
+        },
+      }),
+    });
+
+    assert.equal((await service.listWordSetSummaries())[0].id, "word-set-1");
+    assert.equal((await service.getWordSetDetails("word-set-1"))?.id, "word-set-1");
+    assert.equal(
+      (
+        await service.createWordSet({
+          title: "Food vocabulary",
+          description: "Words for restaurants.",
+        })
+      ).id,
+      "word-set-2",
+    );
+    assert.equal(
+      (
+        await service.updateWordSetOverview("word-set-1", {
+          title: "Updated travel",
+          description: "Updated description",
+          tag: "A2",
+        })
+      ).title,
+      "Updated travel",
+    );
+    assert.deepEqual(await service.deleteWordSet("word-set-1"), {
+      id: "word-set-1",
+    });
+    assert.deepEqual(
+      calls.map((call) => `${call.method} ${call.path}`),
+      [
+        "GET /teacher/word-sets",
+        "GET /teacher/word-sets/word-set-1",
+        "POST /teacher/word-sets",
+        "PUT /teacher/word-sets/word-set-1",
+        "DELETE /teacher/word-sets/word-set-1",
+      ],
+    );
+  });
+
+  it("maps teacher word mutations and bulk delete to nested endpoints", async () => {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    const word = createWordSetDetails().wordsList[0];
+    const service = createWordSetsService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        post: async (path, body) => {
+          calls.push({ method: "POST", path, body });
+
+          if (path.endsWith("/bulk-delete")) {
+            return { wordIds: ["word-1", "word-2"] };
+          }
+
+          return [word];
+        },
+        put: async (path, body) => {
+          calls.push({ method: "PUT", path, body });
+          return { ...word, term: "updated journey" };
+        },
+        delete: async (path) => {
+          calls.push({ method: "DELETE", path });
+          return { wordId: "word-1" };
+        },
+      }),
+    });
+
+    assert.equal(
+      (
+        await service.addWords("word-set-1", [
+          {
+            term: "journey",
+            translation: "подорож",
+            exampleSentence: "The journey took three hours.",
+          },
+        ])
+      )[0].id,
+      "word-1",
+    );
+    assert.equal(
+      (
+        await service.updateWord("word-set-1", {
+          id: "word-1",
+          term: "updated journey",
+          translation: "подорож",
+          exampleSentence: "The journey took three hours.",
+        })
+      ).term,
+      "updated journey",
+    );
+    assert.deepEqual(await service.deleteWord("word-set-1", "word-1"), {
+      wordId: "word-1",
+    });
+    assert.deepEqual(
+      await service.deleteWords("word-set-1", ["word-1", "word-2"]),
+      { wordIds: ["word-1", "word-2"] },
+    );
+    assert.deepEqual(
+      calls.map((call) => `${call.method} ${call.path}`),
+      [
+        "POST /teacher/word-sets/word-set-1/words",
+        "PUT /teacher/word-sets/word-set-1/words/word-1",
+        "DELETE /teacher/word-sets/word-set-1/words/word-1",
+        "POST /teacher/word-sets/word-set-1/words/bulk-delete",
+      ],
+    );
+  });
+
+  it("assigns a teacher word set to a class through assignment endpoint", async () => {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    const classItem = {
+      id: "class-1",
+      name: "English A2",
+      students: 1,
+      wordSets: 1,
+      progress: 0,
+    };
+    const service = createWordSetsService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        post: async (path, body) => {
+          calls.push({ method: "POST", path, body });
+          return {
+            id: "assignment-1",
+            classId: "class-1",
+            wordSetId: "word-set-1",
+          };
+        },
+      }),
+    });
+
+    assert.deepEqual(await service.assignToClass("word-set-1", classItem), classItem);
+    assert.deepEqual(calls, [
+      {
+        method: "POST",
+        path: "/teacher/assignments",
+        body: {
+          classId: "class-1",
+          wordSetId: "word-set-1",
+        },
+      },
+    ]);
+  });
+
+  it("maps student classes, assignments, and join endpoints", async () => {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    const joinedClass = {
+      id: "class-1",
+      name: "English A2",
+      teacherName: "Teacher Demo",
+      level: "A2",
+      progress: 0,
+      wordSets: [],
+    };
+    const assignedWordSet = {
+      id: "assignment-1",
+      classId: "class-1",
+      className: "English A2",
+      title: "Travel vocabulary",
+      words: 2,
+      completedWords: 0,
+      progress: 0,
+      dueLabel: "No due date",
+    };
+    const service = createStudentService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          calls.push({ method: "GET", path });
+
+          return path === "/student/classes" ? [joinedClass] : [assignedWordSet];
+        },
+        post: async (path, body) => {
+          calls.push({ method: "POST", path, body });
+          return joinedClass;
+        },
+      }),
+    });
+
+    assert.deepEqual(await service.listJoinedClasses(), [joinedClass]);
+    assert.deepEqual(await service.listAssignedWordSets(), [assignedWordSet]);
+    assert.deepEqual(await service.getAssignedWordSet("assignment-1"), assignedWordSet);
+    assert.deepEqual(await service.joinClass("A2-7KQ9"), joinedClass);
+    assert.deepEqual(
+      calls.map((call) => `${call.method} ${call.path}`),
+      [
+        "GET /student/classes",
+        "GET /student/assignments",
+        "GET /student/assignments",
+        "POST /student/classes/join",
+      ],
+    );
+  });
+
+  it("gets student word-set details by assignment id", async () => {
+    const service = createStudentService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          assert.equal(path, "/student/word-sets/assignment-1");
+          return createWordSetDetails();
+        },
+      }),
+    });
+    const details = await service.getAssignedWordSetDetails("assignment-1");
+
+    assert.equal(details?.id, "word-set-1");
+  });
 });
 
 type BackendClassDetailsFixture = Omit<MockClassDetails, "studentsList"> & {
@@ -234,6 +484,32 @@ function createBackendClassDetails(): BackendClassDetailsFixture {
     ],
     wordSetsList: [],
     problemWords: [],
+  };
+}
+
+function createWordSetDetails() {
+  return {
+    id: "word-set-1",
+    classId: "class-1",
+    className: "English A2",
+    title: "Travel vocabulary",
+    description: "Words for trips.",
+    words: 2,
+    assignedStudents: 1,
+    averageProgress: 0,
+    createdAt: "2026-05-27T10:00:00.000Z",
+    wordsList: [
+      {
+        id: "word-1",
+        term: "journey",
+        translation: "подорож",
+        exampleSentence: "The journey took three hours.",
+        transcription: null,
+        masteryLevel: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+      },
+    ],
   };
 }
 
