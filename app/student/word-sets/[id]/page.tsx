@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-import { StudentWordSetDetailsPage } from "@/features/student/word-sets/student-word-set-details-page";
-import { studentService, wordSetsService } from "@/services";
+import { StudentWordSetDetailsClientPage } from "@/features/student/student-client-pages";
 
 interface StudentWordSetRouteProps {
   params: Promise<{
@@ -12,19 +10,6 @@ export default async function StudentWordSetRoute({
   params,
 }: StudentWordSetRouteProps) {
   const { id } = await params;
-  const [wordSet, wordSetDetails] = await Promise.all([
-    studentService.getAssignedWordSet(id),
-    wordSetsService.getWordSetDetails(id),
-  ]);
 
-  if (!wordSet) {
-    notFound();
-  }
-
-  return (
-    <StudentWordSetDetailsPage
-      wordSet={wordSet}
-      words={wordSetDetails?.wordsList ?? []}
-    />
-  );
+  return <StudentWordSetDetailsClientPage id={id} />;
 }
