@@ -1208,8 +1208,8 @@ function DeleteClassDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete class?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove {className} from the local mock view. This action
-            cannot be undone in this session.
+            This will remove {className} and its assignments. This action cannot
+            be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
