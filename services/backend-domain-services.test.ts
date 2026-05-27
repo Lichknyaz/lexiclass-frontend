@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import type { MockClassDetails } from "../types/mock.ts";
 import type { ApiClient } from "./api-client.ts";
 import { createAssignmentsService } from "./assignments-service.ts";
+import { createAnalyticsService } from "./analytics-service.ts";
 import { createClassesService } from "./classes-service.ts";
+import { createPracticeService } from "./practice-service.ts";
 import { createStudentService } from "./student-service.ts";
 import { createWordSetsService } from "./word-sets-service.ts";
 
@@ -450,6 +452,114 @@ describe("backend domain services", () => {
     const details = await service.getAssignedWordSetDetails("assignment-1");
 
     assert.equal(details?.id, "word-set-1");
+  });
+
+  it("maps student progress words to the progress endpoint", async () => {
+    const service = createStudentService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          assert.equal(path, "/student/progress/words");
+          return [
+            {
+              id: "word-1",
+              term: "journey",
+              translation: "подорож",
+              masteryLevel: 50,
+              correctCount: 1,
+              wrongCount: 1,
+              lastPracticedAt: null,
+            },
+          ];
+        },
+      }),
+    });
+    const words = await service.listProgressWords();
+
+    assert.equal(words[0].lastPracticedAt, "Not practiced yet");
+  });
+
+  it("persists practice sessions with backend practice mode values", async () => {
+    const service = createPracticeService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        post: async (path, body) => {
+          assert.equal(path, "/student/practice-sessions");
+          assert.deepEqual(body, {
+            assignmentId: "assignment-1",
+            studentId: "student-1",
+            mode: "multiple_choice",
+            attempts: [
+              {
+                wordId: "word-1",
+                status: "correct",
+                answeredAt: "2026-05-27T10:00:00.000Z",
+              },
+            ],
+          });
+
+          return {
+            assignmentId: "assignment-1",
+            studentId: "student-1",
+            mode: "multiple_choice",
+            correctAnswers: 1,
+            wrongAnswers: 0,
+            wordResults: [
+              {
+                wordId: "word-1",
+                correctAnswers: 1,
+                wrongAnswers: 0,
+              },
+            ],
+          };
+        },
+      }),
+    });
+    const result = await service.savePracticeSession({
+      assignmentId: "assignment-1",
+      studentId: "student-1",
+      mode: "multiple-choice",
+      attempts: [
+        {
+          wordId: "word-1",
+          status: "correct",
+          answeredAt: "2026-05-27T10:00:00.000Z",
+        },
+      ],
+    });
+
+    assert.equal(result.mode, "multiple-choice");
+    assert.equal(result.correctAnswers, 1);
+  });
+
+  it("maps teacher analytics endpoint with optional class filter", async () => {
+    const calls: string[] = [];
+    const analytics = {
+      totalStudents: 1,
+      totalWordSets: 1,
+      averageProgress: 50,
+      classProgress: [createBackendClassDetails()],
+      problemWords: [],
+    };
+    const service = createAnalyticsService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          calls.push(path);
+          return analytics;
+        },
+      }),
+    });
+
+    assert.deepEqual(await service.getTeacherAnalytics(), analytics);
+    assert.deepEqual(
+      await service.getTeacherAnalytics("class 1"),
+      analytics,
+    );
+    assert.deepEqual(calls, [
+      "/teacher/analytics",
+      "/teacher/analytics?classId=class%201",
+    ]);
   });
 });
 

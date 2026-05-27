@@ -1,10 +1,10 @@
+import { getMockWordSetDetails } from "../mock/mock-data.ts";
 import type {
   MockStudentClass,
   MockStudentProgressWord,
   MockStudentWordSet,
   MockWordSetDetails,
 } from "../types/mock.ts";
-import { getMockWordSetDetails } from "../mock/mock-data.ts";
 import type { ApiClient } from "./api-client.ts";
 import { studentService as mockStudentService } from "./mock-services.ts";
 import {
@@ -12,6 +12,11 @@ import {
   isBackendMode,
   type DataSource,
 } from "./service-runtime.ts";
+
+interface BackendStudentProgressWord
+  extends Omit<MockStudentProgressWord, "lastPracticedAt"> {
+  lastPracticedAt: string | null;
+}
 
 export interface StudentService {
   listJoinedClasses(): Promise<MockStudentClass[]>;
@@ -66,7 +71,9 @@ export function createStudentService({
           return undefined;
         }
 
-        return getMockWordSetDetails(getMockWordSetIdFromAssignmentId(assignmentId));
+        return getMockWordSetDetails(
+          getMockWordSetIdFromAssignmentId(assignmentId),
+        );
       }
 
       return client.get<MockWordSetDetails>(
@@ -75,7 +82,18 @@ export function createStudentService({
     },
 
     async listProgressWords() {
-      return mockStudentService.listProgressWords();
+      if (!usesBackend()) {
+        return mockStudentService.listProgressWords();
+      }
+
+      const words = await client.get<BackendStudentProgressWord[]>(
+        "/student/progress/words",
+      );
+
+      return words.map((word) => ({
+        ...word,
+        lastPracticedAt: word.lastPracticedAt ?? "Not practiced yet",
+      }));
     },
 
     async joinClass(inviteCode) {
