@@ -1,6 +1,4 @@
-import { notFound } from "next/navigation";
-import { ClassDetailsPage } from "@/features/teacher/classes/class-details-page";
-import { classesService, wordSetsService } from "@/services";
+import { TeacherClassDetailsClientPage } from "@/features/teacher/teacher-client-pages";
 
 interface TeacherClassPageProps {
   params: Promise<{
@@ -12,19 +10,6 @@ export default async function TeacherClassPage({
   params,
 }: TeacherClassPageProps) {
   const { id } = await params;
-  const [classDetails, wordSetSummaries] = await Promise.all([
-    classesService.getClassDetails(id),
-    wordSetsService.listWordSetSummaries(),
-  ]);
 
-  if (!classDetails) {
-    notFound();
-  }
-
-  return (
-    <ClassDetailsPage
-      classDetails={classDetails}
-      wordSetSummaries={wordSetSummaries}
-    />
-  );
+  return <TeacherClassDetailsClientPage id={id} />;
 }

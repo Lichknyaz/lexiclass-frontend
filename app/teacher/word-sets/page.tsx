@@ -1,8 +1,5 @@
-import { TeacherWordSetsPage } from "@/features/teacher/word-sets/teacher-word-sets-page";
-import { wordSetsService } from "@/services";
+import { TeacherWordSetsClientPage } from "@/features/teacher/teacher-client-pages";
 
-export default async function TeacherWordSetsRoute() {
-  const wordSets = await wordSetsService.listWordSetSummaries();
-
-  return <TeacherWordSetsPage wordSets={wordSets} />;
+export default function TeacherWordSetsRoute() {
+  return <TeacherWordSetsClientPage />;
 }
