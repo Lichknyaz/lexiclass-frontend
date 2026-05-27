@@ -1,8 +1,5 @@
-import { TeacherAnalyticsPage } from "@/features/teacher/analytics/teacher-analytics-page";
-import { analyticsService } from "@/services";
+import { TeacherAnalyticsClientPage } from "@/features/teacher/teacher-client-pages";
 
-export default async function AnalyticsPage() {
-  const analytics = await analyticsService.getTeacherAnalytics();
-
-  return <TeacherAnalyticsPage analytics={analytics} />;
+export default function AnalyticsPage() {
+  return <TeacherAnalyticsClientPage />;
 }
