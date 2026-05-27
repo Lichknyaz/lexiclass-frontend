@@ -1051,8 +1051,7 @@ function RemoveStudentDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove student from this class?</AlertDialogTitle>
           <AlertDialogDescription>
-            {student?.name} will be removed from this class in the local mock
-            view.
+            {student?.name} will lose access to assignments for this class.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
