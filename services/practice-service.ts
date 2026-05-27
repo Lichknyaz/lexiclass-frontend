@@ -24,7 +24,7 @@ export type {
 type BackendPracticeMode = "flashcard" | "multiple_choice" | "writing";
 
 interface BackendSavePracticeSessionInput
-  extends Omit<SavePracticeSessionInput, "mode"> {
+  extends Omit<SavePracticeSessionInput, "mode" | "studentId"> {
   mode: BackendPracticeMode;
 }
 
@@ -60,7 +60,8 @@ export function createPracticeService({
         BackendPracticeSessionResult,
         BackendSavePracticeSessionInput
       >("/student/practice-sessions", {
-        ...input,
+        assignmentId: input.assignmentId,
+        attempts: input.attempts,
         mode: toBackendPracticeMode(input.mode),
       });
 

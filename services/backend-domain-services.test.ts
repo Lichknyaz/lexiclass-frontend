@@ -487,7 +487,6 @@ describe("backend domain services", () => {
           assert.equal(path, "/student/practice-sessions");
           assert.deepEqual(body, {
             assignmentId: "assignment-1",
-            studentId: "student-1",
             mode: "multiple_choice",
             attempts: [
               {
