@@ -1,5 +1,7 @@
 import {
+  AUTH_STORAGE_KEY,
   createLocalUser,
+  parseStoredSession,
   type AuthUser,
   type UserRole,
 } from "../features/auth/auth-session.ts";
@@ -27,7 +29,7 @@ export interface AuthService {
   logout(): Promise<void>;
 }
 
-export const AUTH_STORAGE_KEY = "lexiclass-auth-user";
+export { AUTH_STORAGE_KEY };
 
 export function createAuthService({
   storage = getBrowserStorage(),
@@ -47,7 +49,8 @@ export function createAuthService({
       }
 
       try {
-        const user = parseStoredUser(JSON.parse(storedValue));
+        const session = parseStoredSession(JSON.parse(storedValue));
+        const user = session?.user ?? null;
 
         if (!user) {
           storage.removeItem(AUTH_STORAGE_KEY);
@@ -91,7 +94,13 @@ export function createAuthService({
 export const authService = createAuthService();
 
 function saveUser(storage: AuthStorage | null, user: AuthUser) {
-  storage?.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  storage?.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({
+      user,
+      accessToken: null,
+    }),
+  );
 }
 
 function getBrowserStorage(): AuthStorage | null {
@@ -100,28 +109,4 @@ function getBrowserStorage(): AuthStorage | null {
   }
 
   return window.localStorage;
-}
-
-function parseStoredUser(value: unknown): AuthUser | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const user = value as Partial<AuthUser>;
-
-  if (
-    typeof user.id !== "string" ||
-    typeof user.name !== "string" ||
-    typeof user.email !== "string" ||
-    (user.role !== "teacher" && user.role !== "student")
-  ) {
-    return null;
-  }
-
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
 }

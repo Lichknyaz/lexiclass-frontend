@@ -7,6 +7,11 @@ export interface AuthUser {
   role: UserRole;
 }
 
+export interface AuthSession {
+  user: AuthUser;
+  accessToken: string | null;
+}
+
 export interface LocalUserInput {
   name: string;
   email: string;
@@ -22,7 +27,7 @@ export type RouteAccessDecision =
       redirectTo: string;
     };
 
-const AUTH_STORAGE_KEY = "lexiclass-auth-user";
+export const AUTH_STORAGE_KEY = "lexiclass-auth-user";
 
 export function getRoleHome(role: UserRole) {
   return role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
@@ -75,7 +80,7 @@ export function getStoredUser() {
   }
 
   try {
-    return parseStoredUser(JSON.parse(storedValue));
+    return parseStoredSession(JSON.parse(storedValue))?.user ?? null;
   } catch {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
     return null;
@@ -83,11 +88,53 @@ export function getStoredUser() {
 }
 
 export function storeUser(user: AuthUser) {
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+  storeSession({
+    user,
+    accessToken: null,
+  });
+}
+
+export function storeSession(session: AuthSession) {
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
 }
 
 export function clearStoredUser() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+export function parseStoredSession(value: unknown): AuthSession | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const possibleSession = value as Partial<AuthSession>;
+
+  if (possibleSession.user) {
+    const user = parseStoredUser(possibleSession.user);
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      user,
+      accessToken:
+        typeof possibleSession.accessToken === "string"
+          ? possibleSession.accessToken
+          : null,
+    };
+  }
+
+  const legacyUser = parseStoredUser(value);
+
+  if (!legacyUser) {
+    return null;
+  }
+
+  return {
+    user: legacyUser,
+    accessToken: null,
+  };
 }
 
 function parseStoredUser(value: unknown): AuthUser | null {

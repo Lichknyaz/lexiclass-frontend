@@ -17,6 +17,17 @@ export {
   type ApiRequestOptions,
 } from "./api-client";
 export {
+  DEFAULT_API_URL,
+  DEFAULT_DATA_SOURCE,
+  apiClient,
+  createRuntimeApiClient,
+  getApiBaseUrl,
+  getDataSource,
+  getStoredAccessToken,
+  isBackendMode,
+  type DataSource,
+} from "./service-runtime";
+export {
   classesService,
   type ClassOverviewInput,
   type CreateClassInput,
