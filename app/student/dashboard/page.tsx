@@ -1,16 +1,5 @@
-import { StudentDashboardPage } from "@/features/student/dashboard/student-dashboard-page";
-import { studentService } from "@/services";
+import { StudentDashboardClientPage } from "@/features/student/student-client-pages";
 
-export default async function StudentDashboardRoute() {
-  const [joinedClasses, assignedWordSets] = await Promise.all([
-    studentService.listJoinedClasses(),
-    studentService.listAssignedWordSets(),
-  ]);
-
-  return (
-    <StudentDashboardPage
-      joinedClasses={joinedClasses}
-      assignedWordSets={assignedWordSets}
-    />
-  );
+export default function StudentDashboardRoute() {
+  return <StudentDashboardClientPage />;
 }
