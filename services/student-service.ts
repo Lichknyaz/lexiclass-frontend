@@ -12,6 +12,7 @@ import {
   isBackendMode,
   type DataSource,
 } from "./service-runtime.ts";
+import { formatLastPracticedAt } from "../utils/date-time.ts";
 
 interface BackendStudentProgressWord
   extends Omit<MockStudentProgressWord, "lastPracticedAt"> {
@@ -92,7 +93,7 @@ export function createStudentService({
 
       return words.map((word) => ({
         ...word,
-        lastPracticedAt: word.lastPracticedAt ?? "Not practiced yet",
+        lastPracticedAt: formatLastPracticedAt(word.lastPracticedAt),
       }));
     },
 
