@@ -729,7 +729,7 @@ type StudentFilter = "all" | "low-completion" | "inactive";
 const studentFilterOptions: Array<{ label: string; value: StudentFilter }> = [
   { label: "All", value: "all" },
   { label: "Low completion (<50%)", value: "low-completion" },
-  { label: "Inactive", value: "inactive" },
+  { label: "No recent practice", value: "inactive" },
 ];
 
 function matchesStudentFilter(student: MockStudent, filter: StudentFilter) {
