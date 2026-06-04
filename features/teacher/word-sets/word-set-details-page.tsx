@@ -737,7 +737,7 @@ function AssignClassDialog({
 }: AssignClassDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[85vh] sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Assign Word Set to Class</DialogTitle>
           <DialogDescription>
@@ -762,7 +762,7 @@ function AssignClassDialog({
               This word set is already assigned to every class.
             </div>
           ) : (
-            <div className="grid gap-3">
+            <div className="grid max-h-[46vh] gap-3 overflow-y-auto pr-1">
               {availableClasses.map((classItem) => (
                 <div
                   key={classItem.id}
