@@ -106,7 +106,7 @@ export function PracticePage({ wordSet, words: allWords }: PracticePageProps) {
   };
 
   const startWeakWordsSession = () => {
-    const weakWords = getWordsByScope(allWords, "weak");
+    const weakWords = getWeakWordsForSession(allWords, attempts);
 
     setWordScope("weak");
     setSessionWords(weakWords.length > 0 ? weakWords : allWords);
@@ -282,6 +282,7 @@ export function PracticePage({ wordSet, words: allWords }: PracticePageProps) {
             correctCount={correctCount}
             wrongCount={wrongCount}
             words={words}
+            attempts={attempts}
             saveStatus={saveStatus}
             onPracticeWeakWords={startWeakWordsSession}
           />
@@ -354,6 +355,21 @@ function getWordsByScope(words: MockWord[], scope: WordScope) {
   }
 
   return words;
+}
+
+function getWeakWordsForSession(
+  words: MockWord[],
+  attempts: PracticeAttemptInput[],
+) {
+  const wrongWordIds = new Set(
+    attempts
+      .filter((attempt) => attempt.status === "wrong")
+      .map((attempt) => attempt.wordId),
+  );
+
+  return words.filter(
+    (word) => word.masteryLevel < 60 || wrongWordIds.has(word.id),
+  );
 }
 
 interface SetupCardProps {
@@ -614,6 +630,7 @@ interface ResultCardProps {
   correctCount: number;
   wrongCount: number;
   words: MockWord[];
+  attempts: PracticeAttemptInput[];
   saveStatus: "idle" | "saved" | "error";
   onPracticeWeakWords: () => void;
 }
@@ -622,12 +639,13 @@ function ResultCard({
   correctCount,
   wrongCount,
   words,
+  attempts,
   saveStatus,
   onPracticeWeakWords,
 }: ResultCardProps) {
   const totalWords = words.length;
   const score = getPercentage(correctCount, totalWords);
-  const weakWords = words.filter((word) => word.masteryLevel < 60);
+  const weakWords = getWeakWordsForSession(words, attempts);
 
   return (
     <Card>

@@ -52,6 +52,20 @@ test("teacher assignment, student practice, and analytics work with backend data
   await expect(page.getByRole("heading", { name: "Practice" })).toBeVisible();
   await page.getByRole("button", { name: "Start Practice" }).click();
   await page.getByRole("button", { name: "Show Answer" }).click();
+  await page.getByRole("button", { name: "I Knew It" }).click();
+  await page.getByRole("button", { name: "Next Word" }).click();
+
+  await expect(page.getByText("Session complete")).toBeVisible();
+  await expect(
+    page.getByText("Practice result saved for progress tracking."),
+  ).toBeVisible();
+
+  await page.goto("/student/dashboard");
+  await expect(assignmentCard).toBeVisible();
+  await assignmentCard.getByRole("link", { name: "Practice" }).click();
+  await expect(page.getByRole("heading", { name: "Practice" })).toBeVisible();
+  await page.getByRole("button", { name: "Start Practice" }).click();
+  await page.getByRole("button", { name: "Show Answer" }).click();
   await page.getByRole("button", { name: "Need Review" }).click();
   await page.getByRole("button", { name: "Next Word" }).click();
 
@@ -59,6 +73,7 @@ test("teacher assignment, student practice, and analytics work with backend data
   await expect(
     page.getByText("Practice result saved for progress tracking."),
   ).toBeVisible();
+  await expect(page.getByText(term, { exact: true })).toBeVisible();
 
   await logoutByClearingSession(page);
   await login(page, "teacher");
@@ -77,7 +92,7 @@ test("teacher assignment, student practice, and analytics work with backend data
     .getByRole("row")
     .filter({ has: page.getByText(term, { exact: true }) });
   await expect(wordRow).toBeVisible();
-  await expect(wordRow.getByText(/0\s*\/\s*1 wrong/)).toBeVisible();
+  await expect(wordRow.getByText(/1\s*\/\s*1 wrong/)).toBeVisible();
 });
 
 async function login(page: Page, role: "teacher" | "student") {
