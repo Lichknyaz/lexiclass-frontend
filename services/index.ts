@@ -31,6 +31,8 @@ export {
   classesService,
   type ClassOverviewInput,
   type CreateClassInput,
+  type CreateReviewWordSetInput,
+  type ReviewWord,
   type StudentInput,
   type StudentProfileInput,
 } from "./classes-service";

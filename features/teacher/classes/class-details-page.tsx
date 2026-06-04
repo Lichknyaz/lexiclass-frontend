@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Search,
   Trash2,
   TrendingDown,
   Users,
@@ -29,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +67,11 @@ import {
   type MockWordSet,
   type MockWordSetSummary,
 } from "@/types/mock";
-import { classesService } from "@/services";
+import {
+  classesService,
+  type CreateReviewWordSetInput,
+  type ReviewWord,
+} from "@/services";
 import { getErrorMessage, getMistakeRate } from "@/utils";
 
 interface ClassDetailsPageProps {
@@ -80,6 +86,7 @@ export function ClassDetailsPage({
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [reviewSetDialogOpen, setReviewSetDialogOpen] = useState(false);
   const [inviteStudentDialogOpen, setInviteStudentDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -202,6 +209,32 @@ export function ClassDetailsPage({
     document
       .getElementById("problem-words")
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCreateReviewWordSet = async (
+    input: CreateReviewWordSetInput,
+  ) => {
+    const result = await classesService.createClassReviewWordSet(
+      classDetails.id,
+      input,
+    );
+
+    if (result.assignment) {
+      setAssignedWordSets((currentWordSets) => [
+        ...currentWordSets,
+        {
+          id: result.wordSet.id,
+          classId: classDetails.id,
+          title: result.wordSet.title,
+          description: result.wordSet.description,
+          words: result.wordSet.words,
+          assignedStudents: students.length,
+          averageProgress: 0,
+        },
+      ]);
+    }
+
+    return result;
   };
 
   const handleAddStudent = async (student: NewStudentInput) => {
@@ -482,6 +515,7 @@ export function ClassDetailsPage({
                 problemWords={classDetails.problemWords}
                 totalWrongAnswers={totalWrongAnswers}
                 onReview={handleReviewProblemWords}
+                onCreateReviewSet={() => setReviewSetDialogOpen(true)}
               />
             </section>
 
@@ -534,6 +568,14 @@ export function ClassDetailsPage({
         onOpenChange={setAssignDialogOpen}
         availableWordSets={availableWordSets}
         onAssign={handleAssignWordSet}
+      />
+      <CreateReviewSetDialog
+        open={reviewSetDialogOpen}
+        onOpenChange={setReviewSetDialogOpen}
+        classId={classDetails.id}
+        className={classOverview.name}
+        classLevel={classOverview.level}
+        onCreate={handleCreateReviewWordSet}
       />
       <InviteStudentDialog
         open={inviteStudentDialogOpen}
@@ -607,17 +649,23 @@ interface ProblemWordsCardProps {
   problemWords: MockClassDetails["problemWords"];
   totalWrongAnswers: number;
   onReview: () => void;
+  onCreateReviewSet: () => void;
 }
 
 function ProblemWordsCard({
   problemWords,
   totalWrongAnswers,
+  onCreateReviewSet,
 }: ProblemWordsCardProps) {
   return (
     <Card id="problem-words">
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle>Problem Words</CardTitle>
+          <Button size="sm" onClick={onCreateReviewSet}>
+            <Plus className="size-4" />
+            Create review set
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -670,6 +718,393 @@ function formatProblemWordImpact(word: MockClassDetails["problemWords"][number])
 
 function pluralize(label: string, count: number) {
   return count === 1 ? label : `${label}s`;
+}
+
+type ReviewWordSource = "weak" | "all";
+type ProblemWordWindow = "14" | "30" | "90" | "all";
+
+interface CreateReviewSetDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  classId: string;
+  className: string;
+  classLevel: string;
+  onCreate: (input: CreateReviewWordSetInput) => Promise<unknown>;
+}
+
+function CreateReviewSetDialog({
+  open,
+  onOpenChange,
+  classId,
+  className,
+  classLevel,
+  onCreate,
+}: CreateReviewSetDialogProps) {
+  const [source, setSource] = useState<ReviewWordSource>("weak");
+  const [problemWordWindow, setProblemWordWindow] =
+    useState<ProblemWordWindow>("14");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [reviewWords, setReviewWords] = useState<ReviewWord[]>([]);
+  const [selectedWordIds, setSelectedWordIds] = useState<string[]>([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [tag, setTag] = useState("");
+  const [assignToClass, setAssignToClass] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setSource("weak");
+    setProblemWordWindow("14");
+    setSearchQuery("");
+    setTitle(`Review: ${className}`);
+    setDescription(`Review set created from weak words for ${className}.`);
+    setTag(classLevel);
+    setAssignToClass(true);
+    setErrorMessage("");
+  }, [classLevel, className, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadReviewWords() {
+      setLoading(true);
+      setErrorMessage("");
+
+      try {
+        const words = await classesService.listClassReviewWords(classId, {
+          source,
+          problemWordWindow: source === "weak" ? problemWordWindow : undefined,
+        });
+
+        if (cancelled) {
+          return;
+        }
+
+        setReviewWords(words);
+        setSelectedWordIds(words.map((word) => word.wordId));
+        setDescription(
+          `Review set created from ${source === "weak" ? "weak words" : "assigned words"} for ${className}.`,
+        );
+      } catch (error) {
+        if (!cancelled) {
+          setErrorMessage(getErrorMessage(error, "Could not load review words"));
+          setReviewWords([]);
+          setSelectedWordIds([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadReviewWords();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [classId, className, open, problemWordWindow, source]);
+
+  const filteredReviewWords = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) {
+      return reviewWords;
+    }
+
+    return reviewWords.filter((word) =>
+      [word.term, word.translation, word.sourceWordSetTitle]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [reviewWords, searchQuery]);
+
+  const selectedWordsCount = selectedWordIds.length;
+
+  const handleSourceChange = (nextSource: ReviewWordSource) => {
+    setSource(nextSource);
+    setSearchQuery("");
+  };
+
+  const handleWordSelection = (wordId: string, checked: boolean) => {
+    setSelectedWordIds((currentWordIds) =>
+      checked
+        ? [...new Set([...currentWordIds, wordId])]
+        : currentWordIds.filter((currentWordId) => currentWordId !== wordId),
+    );
+  };
+
+  const handleSelectAllVisible = () => {
+    setSelectedWordIds((currentWordIds) => [
+      ...new Set([
+        ...currentWordIds,
+        ...filteredReviewWords.map((word) => word.wordId),
+      ]),
+    ]);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedWordIds([]);
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!title.trim() || selectedWordIds.length === 0) {
+      return;
+    }
+
+    setCreating(true);
+    setErrorMessage("");
+
+    try {
+      await onCreate({
+        title: title.trim(),
+        description: description.trim(),
+        tag: tag.trim(),
+        wordIds: selectedWordIds,
+        assignToClass,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Could not create review set"));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[88vh] sm:max-w-3xl">
+        <form onSubmit={handleSubmit} className="flex max-h-[82vh] flex-col">
+          <DialogHeader>
+            <DialogTitle>Create review set</DialogTitle>
+            <DialogDescription>{className}</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-5 overflow-y-auto py-5 pr-1">
+            {errorMessage && (
+              <Alert variant="destructive">
+                <AlertTitle>Could not continue</AlertTitle>
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field>
+                <FieldLabel>Source</FieldLabel>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={source === "weak" ? "default" : "outline"}
+                    onClick={() => handleSourceChange("weak")}
+                  >
+                    Weak words
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={source === "all" ? "default" : "outline"}
+                    onClick={() => handleSourceChange("all")}
+                  >
+                    All assigned
+                  </Button>
+                </div>
+              </Field>
+
+              {source === "weak" && (
+                <Field>
+                  <FieldLabel>Time window</FieldLabel>
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["14", "30", "90", "all"] as ProblemWordWindow[]).map(
+                      (window) => (
+                        <Button
+                          key={window}
+                          type="button"
+                          variant={
+                            problemWordWindow === window ? "default" : "outline"
+                          }
+                          onClick={() => setProblemWordWindow(window)}
+                        >
+                          {formatProblemWordWindow(window)}
+                        </Button>
+                      ),
+                    )}
+                  </div>
+                </Field>
+              )}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search words"
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSelectAllVisible}
+                disabled={filteredReviewWords.length === 0}
+              >
+                Select visible
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleClearSelection}
+                disabled={selectedWordsCount === 0}
+              >
+                Clear
+              </Button>
+            </div>
+
+            <div className="rounded-lg border">
+              <div className="flex items-center justify-between border-b px-4 py-3 text-sm">
+                <span className="font-medium">
+                  {selectedWordsCount} selected
+                </span>
+                <span className="text-muted-foreground">
+                  {filteredReviewWords.length} visible
+                </span>
+              </div>
+              <div className="max-h-[280px] overflow-auto p-3">
+                {loading ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    Loading words...
+                  </div>
+                ) : filteredReviewWords.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No words found.
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    {filteredReviewWords.map((word) => {
+                      const checked = selectedWordIds.includes(word.wordId);
+
+                      return (
+                        <label
+                          key={word.wordId}
+                          className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 hover:bg-muted/40"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(value) =>
+                              handleWordSelection(word.wordId, Boolean(value))
+                            }
+                            aria-label={`Select ${word.term}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{word.term}</span>
+                              {source === "weak" && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-destructive/30 text-destructive"
+                                >
+                                  {word.wrongRate}% wrong
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {word.translation}
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {word.sourceWordSetTitle}
+                              {source === "weak"
+                                ? ` · ${formatReviewWordImpact(word)}`
+                                : null}
+                            </div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <Field>
+                <FieldLabel htmlFor="review-set-title">Title</FieldLabel>
+                <Input
+                  id="review-set-title"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="review-set-description">
+                  Description
+                </FieldLabel>
+                <Textarea
+                  id="review-set-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  rows={3}
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="review-set-tag">Tag</FieldLabel>
+                <Input
+                  id="review-set-tag"
+                  value={tag}
+                  onChange={(event) => setTag(event.target.value)}
+                  placeholder="A2 review"
+                />
+              </Field>
+              <label className="flex items-center gap-3 rounded-lg border p-3">
+                <Checkbox
+                  checked={assignToClass}
+                  onCheckedChange={(value) => setAssignToClass(Boolean(value))}
+                  aria-label="Assign to this class"
+                />
+                <span className="text-sm font-medium">Assign to this class</span>
+              </label>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!title.trim() || selectedWordsCount === 0 || creating}
+            >
+              {creating ? "Creating..." : "Create review set"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function formatProblemWordWindow(window: ProblemWordWindow) {
+  return window === "all" ? "All" : `${window}d`;
+}
+
+function formatReviewWordImpact(word: ReviewWord) {
+  return `${word.wrongAnswers} ${pluralize("wrong answer", word.wrongAnswers)} across ${word.affectedStudents} ${pluralize("student", word.affectedStudents)}`;
 }
 
 interface StudentActionsMenuProps {
