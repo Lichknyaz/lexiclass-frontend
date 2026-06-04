@@ -1156,8 +1156,7 @@ function DeleteWordDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this word?</AlertDialogTitle>
           <AlertDialogDescription>
-            {word?.term} will be removed from this word set in the local mock
-            view.
+            {word?.term} will be removed from this word set.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -1309,8 +1308,8 @@ function DeleteWordSetDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete word set?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will remove {wordSetTitle} from the local mock view. This
-            action cannot be undone in this session.
+            This will remove {wordSetTitle} and its words. This action cannot
+            be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

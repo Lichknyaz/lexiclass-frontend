@@ -479,6 +479,33 @@ describe("backend domain services", () => {
     assert.equal(words[0].lastPracticedAt, "Not practiced yet");
   });
 
+  it("formats student progress timestamps for display", async () => {
+    const service = createStudentService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          assert.equal(path, "/student/progress/words");
+          return [
+            {
+              id: "word-1",
+              term: "journey",
+              translation: "подорож",
+              masteryLevel: 50,
+              correctCount: 1,
+              wrongCount: 1,
+              lastPracticedAt: "2026-05-29T14:49:48.886Z",
+            },
+          ];
+        },
+      }),
+    });
+    const words = await service.listProgressWords();
+
+    assert.notEqual(words[0].lastPracticedAt, "2026-05-29T14:49:48.886Z");
+    assert.match(words[0].lastPracticedAt, /2026/);
+    assert.match(words[0].lastPracticedAt, /14:49|2:49|16:49|4:49/);
+  });
+
   it("persists practice sessions with backend practice mode values", async () => {
     const service = createPracticeService({
       dataSource: "backend",
@@ -487,7 +514,6 @@ describe("backend domain services", () => {
           assert.equal(path, "/student/practice-sessions");
           assert.deepEqual(body, {
             assignmentId: "assignment-1",
-            studentId: "student-1",
             mode: "multiple_choice",
             attempts: [
               {
