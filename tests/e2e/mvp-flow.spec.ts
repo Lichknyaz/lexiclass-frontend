@@ -83,7 +83,13 @@ test("teacher assignment, student practice, and analytics work with backend data
   await expect(
     page.locator("[data-slot='card-title']").filter({ hasText: "Problem Words" }),
   ).toBeVisible();
-  await expect(page.getByText(term)).toBeVisible();
+  const problemWordCard = page.locator(".rounded-lg.border").filter({
+    has: page.getByText(term, { exact: true }),
+  });
+  await expect(problemWordCard).toBeVisible();
+  await expect(
+    problemWordCard.getByText("1 wrong answer across 1 student"),
+  ).toBeVisible();
 
   await page.goto("/teacher/word-sets");
   await openWordSet(page, wordSetTitle);

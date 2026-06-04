@@ -646,9 +646,8 @@ function ProblemWordsCard({
                     {wrongRate}% wrong
                   </Badge>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{word.affectedStudents} students affected</span>
-                  <span>{word.wrongAnswers} wrong answers</span>
+                <div className="mt-3 text-xs text-muted-foreground">
+                  {formatProblemWordImpact(word)}
                 </div>
                 <Progress
                   value={wrongRate}
@@ -661,6 +660,14 @@ function ProblemWordsCard({
       </CardContent>
     </Card>
   );
+}
+
+function formatProblemWordImpact(word: MockClassDetails["problemWords"][number]) {
+  return `${word.wrongAnswers} ${pluralize("wrong answer", word.wrongAnswers)} across ${word.affectedStudents} ${pluralize("student", word.affectedStudents)}`;
+}
+
+function pluralize(label: string, count: number) {
+  return count === 1 ? label : `${label}s`;
 }
 
 interface StudentActionsMenuProps {

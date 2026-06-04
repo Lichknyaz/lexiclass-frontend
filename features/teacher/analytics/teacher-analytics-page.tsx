@@ -187,6 +187,9 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
                             value={wrongRate}
                             className="mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
                           />
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            {formatProblemWordImpact(word)}
+                          </div>
                         </div>
                       );
                     })}
@@ -215,6 +218,14 @@ function getProblemWordsForClasses(
       className: classItem.name,
     })),
   );
+}
+
+function formatProblemWordImpact(word: MockProblemWord) {
+  return `${word.wrongAnswers} ${pluralize("wrong answer", word.wrongAnswers)} across ${word.affectedStudents} ${pluralize("student", word.affectedStudents)}`;
+}
+
+function pluralize(label: string, count: number) {
+  return count === 1 ? label : `${label}s`;
 }
 
 interface SummaryCardProps {
