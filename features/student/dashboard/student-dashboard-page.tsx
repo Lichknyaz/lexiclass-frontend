@@ -31,7 +31,7 @@ export function StudentDashboardPage({
   const hasJoinedClasses = joinedClasses.length > 0;
   const hasAssignedWordSets = assignedWordSets.length > 0;
   const [wordSetFilter, setWordSetFilter] = useState<WordSetFilter>("all");
-  const averageProgress = getAverage(
+  const averageCompletion = getAverage(
     joinedClasses.map((classItem) => classItem.progress),
   );
   const continueWordSet = useMemo(
@@ -138,8 +138,8 @@ export function StudentDashboardPage({
           />
           <SummaryCard
             icon={Target}
-            label="Average progress"
-            value={`${averageProgress}%`}
+            label="Average completion"
+            value={`${averageCompletion}%`}
           />
         </section>
 

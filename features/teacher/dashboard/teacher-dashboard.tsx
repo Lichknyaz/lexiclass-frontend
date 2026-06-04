@@ -42,7 +42,7 @@ export function TeacherDashboard({
     (total, classItem) => total + classItem.students,
     0,
   );
-  const averageProgress = getAverage(
+  const averageCompletion = getAverage(
     classes.map((classItem) => classItem.progress),
   );
   const students = useMemo(
@@ -88,15 +88,15 @@ export function TeacherDashboard({
               />
               <StatsCard
                 icon={BarChart3}
-                label="Average progress"
-                value={`${averageProgress}%`}
+                label="Average completion"
+                value={`${averageCompletion}%`}
               />
             </section>
 
             <section className="grid gap-4 xl:grid-cols-12">
               <Card className="h-full xl:col-span-4">
                 <CardHeader className="pb-2">
-                  <CardTitle>Class Progress</CardTitle>
+                  <CardTitle>Class Completion</CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="max-h-[260px] overflow-y-auto rounded-lg border">
@@ -123,7 +123,7 @@ export function TeacherDashboard({
               </div>
               <div className="h-full xl:col-span-4">
                 <StudentsPreview
-                  title="Lowest Progress"
+                  title="Lowest Completion"
                   students={lowestStudents}
                 />
               </div>

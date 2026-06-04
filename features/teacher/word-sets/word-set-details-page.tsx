@@ -389,7 +389,7 @@ export function WordSetDetailsPage({
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Set Progress</CardTitle>
+                  <CardTitle className="text-lg">Set Mastery</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-end justify-between gap-3">
@@ -776,7 +776,7 @@ function AssignClassDialog({
                         {classItem.students} students
                       </span>
                       <span>{classItem.wordSets} word sets</span>
-                      <span>{classItem.progress}% progress</span>
+                      <span>{classItem.progress}% completion</span>
                     </div>
                   </div>
                   <Button onClick={() => onAssign(classItem)}>

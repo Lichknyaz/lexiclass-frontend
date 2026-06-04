@@ -38,7 +38,7 @@ export function ClassCard({ classData, onOpen }: ClassCardProps) {
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
+            <span className="text-muted-foreground">Completion</span>
             <span className="font-medium">{classData.progress}%</span>
           </div>
           <Progress value={classData.progress} className="h-2" />

@@ -44,7 +44,7 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
     (total, word) => total + word.wrongCount,
     0,
   );
-  const progress = getAverage(
+  const averageMastery = getAverage(
     progressWords.map((word) => word.masteryLevel),
   );
   const weakWords = progressWords.filter(
@@ -76,15 +76,15 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
           />
           <SummaryCard
             icon={TrendingDown}
-            label="Progress"
-            value={`${progress}%`}
+            label="Average mastery"
+            value={`${averageMastery}%`}
           />
         </section>
 
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
-              <CardTitle>Word Progress</CardTitle>
+              <CardTitle>Word Mastery</CardTitle>
               <div className="flex flex-wrap gap-2">
                 {progressWordFilterOptions.map((option) => (
                   <Button
@@ -105,7 +105,7 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
                   <TableRow>
                     <TableHead>Word</TableHead>
                     <TableHead>Translation</TableHead>
-                    <TableHead>Progress</TableHead>
+                    <TableHead>Mastery</TableHead>
                     <TableHead className="text-right">Answers</TableHead>
                     <TableHead>Last practiced</TableHead>
                   </TableRow>

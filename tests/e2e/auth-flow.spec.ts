@@ -26,5 +26,6 @@ test("student can log in and reach the student dashboard", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/student\/dashboard$/);
   await expect(page.getByRole("heading", { name: "My Word Sets" })).toBeVisible();
-  await expect(page.getByText("Continue Learning")).toBeVisible();
+  await expect(page.getByText("Classes")).toBeVisible();
+  await expect(page.getByText("Assigned sets")).toBeVisible();
 });

@@ -56,7 +56,7 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
     (total, classItem) => total + classItem.wordSets,
     0,
   );
-  const averageProgress = getAverage(
+  const averageCompletion = getAverage(
     filteredClasses.map((classItem) => classItem.progress),
   );
 
@@ -102,8 +102,8 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
               />
               <SummaryCard
                 icon={BarChart3}
-                label="Average progress"
-                value={`${averageProgress}%`}
+                label="Average completion"
+                value={`${averageCompletion}%`}
               />
               <SummaryCard
                 icon={TrendingDown}
@@ -115,7 +115,7 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
             <section>
               <Card>
                 <CardHeader>
-                  <CardTitle>Class Progress</CardTitle>
+                  <CardTitle>Class Completion</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -124,7 +124,7 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
                         <TableHead>Class</TableHead>
                         <TableHead>Students</TableHead>
                         <TableHead>Word sets</TableHead>
-                        <TableHead>Progress</TableHead>
+                        <TableHead>Completion</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

@@ -355,7 +355,7 @@ export function ClassDetailsPage({
                   <div className="rounded-lg border p-4">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Class progress
+                        Class completion
                       </span>
                       <span className="font-medium">
                         {classDetails.progress}%
@@ -421,7 +421,7 @@ export function ClassDetailsPage({
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Progress</TableHead>
+                        <TableHead>Completion</TableHead>
                         <TableHead className="text-right">Answers</TableHead>
                         <TableHead>Last practice</TableHead>
                         <TableHead className="w-12 text-right">
@@ -511,7 +511,7 @@ export function ClassDetailsPage({
                         </div>
                         <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
                           <span>{wordSet.assignedStudents} assigned</span>
-                          <span>{wordSet.averageProgress}% avg.</span>
+                          <span>{wordSet.averageProgress}% completion avg.</span>
                         </div>
                         <Progress
                           value={wordSet.averageProgress}
@@ -689,7 +689,7 @@ function StudentActionsMenu({
           onClick={() => onViewProgress(student)}
         >
           <Eye className="size-4" />
-          View progress
+          View completion
         </DropdownMenuItem>
         <DropdownMenuItem
           className="cursor-pointer"
@@ -717,16 +717,16 @@ interface NewStudentInput {
   name: string;
 }
 
-type StudentFilter = "all" | "low-progress" | "inactive";
+type StudentFilter = "all" | "low-completion" | "inactive";
 
 const studentFilterOptions: Array<{ label: string; value: StudentFilter }> = [
   { label: "All", value: "all" },
-  { label: "Low progress (<50%)", value: "low-progress" },
+  { label: "Low completion (<50%)", value: "low-completion" },
   { label: "Inactive", value: "inactive" },
 ];
 
 function matchesStudentFilter(student: MockStudent, filter: StudentFilter) {
-  if (filter === "low-progress") {
+  if (filter === "low-completion") {
     return student.progress < 50;
   }
 
@@ -874,7 +874,7 @@ function StudentProgressDialog({
     <Dialog open={Boolean(student)} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{student?.name ?? "Student progress"}</DialogTitle>
+          <DialogTitle>{student?.name ?? "Student completion"}</DialogTitle>
           <DialogDescription>{className}</DialogDescription>
         </DialogHeader>
 
@@ -882,7 +882,7 @@ function StudentProgressDialog({
           <div className="grid gap-4">
             <div className="rounded-lg border p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Progress</span>
+                <span className="text-muted-foreground">Completion</span>
                 <span className="font-medium">{student.progress}%</span>
               </div>
               <Progress value={student.progress} className="mt-3 h-2" />

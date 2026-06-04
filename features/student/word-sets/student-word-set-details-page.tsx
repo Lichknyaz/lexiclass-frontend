@@ -68,7 +68,7 @@ export function StudentWordSetDetailsPage({
           <CardContent className="grid gap-4 sm:grid-cols-3">
             <SummaryMetric
               icon={Target}
-              label="Progress"
+              label="Completion"
               value={`${wordSet.progress}%`}
             />
             <SummaryMetric
@@ -94,7 +94,7 @@ export function StudentWordSetDetailsPage({
                 <TableRow>
                   <TableHead>Term</TableHead>
                   <TableHead>Translation</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead>Mastery</TableHead>
                   <TableHead>Last practiced</TableHead>
                 </TableRow>
               </TableHeader>
