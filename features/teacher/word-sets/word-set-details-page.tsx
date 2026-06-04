@@ -65,7 +65,7 @@ import type {
   MockWordSetDetails,
 } from "@/types/mock";
 import { wordSetsService } from "@/services";
-import { getAverage, getErrorMessage } from "@/utils";
+import { formatDateTime, getAverage, getErrorMessage } from "@/utils";
 
 interface WordSetDetailsPageProps {
   wordSet: MockWordSetDetails;
@@ -404,7 +404,7 @@ export function WordSetDetailsPage({
                     <div className="text-right text-sm text-muted-foreground">
                       Created
                       <div className="font-medium text-foreground">
-                        {wordSet.createdAt}
+                        {formatDateTime(wordSet.createdAt)}
                       </div>
                     </div>
                   </div>

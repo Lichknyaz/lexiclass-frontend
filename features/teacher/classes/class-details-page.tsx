@@ -745,7 +745,10 @@ function matchesStudentFilter(student: MockStudent, filter: StudentFilter) {
 }
 
 function isInactiveStudent(student: MockStudent) {
-  return !["Today", "Yesterday"].includes(student.lastPracticedAt);
+  return !(
+    student.lastPracticedAt.startsWith("Today") ||
+    student.lastPracticedAt.startsWith("Yesterday")
+  );
 }
 
 interface InviteStudentDialogProps {

@@ -18,6 +18,7 @@ import {
   isBackendMode,
   type DataSource,
 } from "./service-runtime.ts";
+import { formatLastPracticedAt } from "../utils/date-time.ts";
 
 export type {
   ClassOverviewInput,
@@ -213,6 +214,6 @@ function normalizeStudent(
 ): MockStudent {
   return {
     ...student,
-    lastPracticedAt: student.lastPracticedAt ?? "Not practiced yet",
+    lastPracticedAt: formatLastPracticedAt(student.lastPracticedAt),
   };
 }

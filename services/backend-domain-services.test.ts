@@ -78,6 +78,34 @@ describe("backend domain services", () => {
     assert.equal(details?.studentsList[0].lastPracticedAt, "Not practiced yet");
   });
 
+  it("formats teacher class student practice timestamps for display", async () => {
+    const service = createClassesService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async () => ({
+          ...createBackendClassDetails(),
+          studentsList: [
+            {
+              ...createBackendClassDetails().studentsList[0],
+              lastPracticedAt: "2026-05-29T14:52:18.454Z",
+            },
+          ],
+        }),
+      }),
+    });
+    const details = await service.getClassDetails("class-1");
+
+    assert.notEqual(
+      details?.studentsList[0].lastPracticedAt,
+      "2026-05-29T14:52:18.454Z",
+    );
+    assert.match(details?.studentsList[0].lastPracticedAt ?? "", /2026/);
+    assert.match(
+      details?.studentsList[0].lastPracticedAt ?? "",
+      /14:52|2:52|16:52|4:52/,
+    );
+  });
+
   it("maps teacher student membership endpoints", async () => {
     const calls: Array<{ method: string; path: string; body?: unknown }> = [];
     const student = {

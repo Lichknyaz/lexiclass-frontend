@@ -8,4 +8,4 @@ export function cn(...inputs: ClassValue[]) {
 export { buildChoices, normalizeAnswer } from "./practice";
 export { getErrorMessage } from "./errors";
 export { getAverage, getMistakeRate, getPercentage } from "./progress";
-export { formatLastPracticedAt } from "./date-time";
+export { formatDateTime, formatLastPracticedAt } from "./date-time";
