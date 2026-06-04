@@ -737,12 +737,13 @@ StudentProgressWordDto[]
 ### Analytics Overview
 
 ```http
-GET /teacher/analytics?classId=:classId
+GET /teacher/analytics?classId=:classId&problemWordWindow=:window
 ```
 
 Query parameters:
 
 - `classId` optional. If present, return analytics scoped to that class.
+- `problemWordWindow` optional. Allowed values: `14`, `30`, `90`, `all`. Defaults to `14`.
 
 Response `200`:
 
@@ -759,6 +760,8 @@ interface TeacherAnalyticsDto {
 Rules:
 
 - `problemWords` must be derived from stored practice attempts.
+- For `problemWordWindow = 14 | 30 | 90`, `problemWords` are limited to attempts in that time window and include only words with at least one wrong answer and a wrong-answer rate of at least 40%.
+- For `problemWordWindow = all`, `problemWords` include every historical word with at least one wrong answer.
 - `affectedStudents` is the count of distinct students with at least one wrong attempt for that word.
 - `averageProgress` should be derived from assignment/word completion, not static counters.
 

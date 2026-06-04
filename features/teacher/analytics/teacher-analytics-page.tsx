@@ -22,15 +22,21 @@ import {
 } from "@/components/ui/table";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import type { TeacherAnalytics } from "@/services";
+import type { ProblemWordWindow, TeacherAnalytics } from "@/services";
 import type { MockClassDetails, MockProblemWord } from "@/types/mock";
 import { getAverage, getMistakeRate } from "@/utils";
 
 interface TeacherAnalyticsPageProps {
   analytics: TeacherAnalytics;
+  problemWordWindow: ProblemWordWindow;
+  onProblemWordWindowChange: (window: ProblemWordWindow) => void;
 }
 
-export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
+export function TeacherAnalyticsPage({
+  analytics,
+  problemWordWindow,
+  onProblemWordWindowChange,
+}: TeacherAnalyticsPageProps) {
   const router = useRouter();
   const [selectedClassId, setSelectedClassId] = useState("all");
 
@@ -70,7 +76,24 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
             <MobileSidebar />
             <h1 className="text-xl font-semibold">Analytics</h1>
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Select
+              value={problemWordWindow}
+              onValueChange={(value) =>
+                onProblemWordWindowChange(value as ProblemWordWindow)
+              }
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue placeholder="Problem window" />
+              </SelectTrigger>
+              <SelectContent>
+                {problemWordWindowOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={selectedClassId} onValueChange={setSelectedClassId}>
               <SelectTrigger className="w-56">
                 <SelectValue placeholder="All Classes" />
@@ -163,37 +186,48 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
             <section>
               <Card>
                 <CardHeader>
-                  <CardTitle>Problem Words</CardTitle>
+                  <div className="flex flex-col gap-1">
+                    <CardTitle>Problem Words</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {getProblemWordWindowDescription(problemWordWindow)}
+                    </p>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                    {problemWords.map((word) => {
-                      const wrongRate = getMistakeRate(word);
+                  {problemWords.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+                      No problem words match the selected time window.
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {problemWords.map((word) => {
+                        const wrongRate = getMistakeRate(word);
 
-                      return (
-                        <div key={word.id} className="rounded-lg border p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-medium">{word.term}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {word.className}
+                        return (
+                          <div key={word.id} className="rounded-lg border p-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="font-medium">{word.term}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {word.className}
+                                </div>
                               </div>
+                              <span className="shrink-0 text-sm font-medium text-destructive">
+                                {wrongRate}% wrong
+                              </span>
                             </div>
-                            <span className="shrink-0 text-sm font-medium text-destructive">
-                              {wrongRate}% wrong
-                            </span>
+                            <Progress
+                              value={wrongRate}
+                              className="mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+                            />
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {formatProblemWordImpact(word)}
+                            </div>
                           </div>
-                          <Progress
-                            value={wrongRate}
-                            className="mt-3 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
-                          />
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            {formatProblemWordImpact(word)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </section>
@@ -206,6 +240,24 @@ export function TeacherAnalyticsPage({ analytics }: TeacherAnalyticsPageProps) {
 
 interface AnalyticsProblemWord extends MockProblemWord {
   className: string;
+}
+
+const problemWordWindowOptions: Array<{
+  label: string;
+  value: ProblemWordWindow;
+}> = [
+  { label: "Last 14 days", value: "14" },
+  { label: "Last 30 days", value: "30" },
+  { label: "Last 90 days", value: "90" },
+  { label: "All history", value: "all" },
+];
+
+function getProblemWordWindowDescription(window: ProblemWordWindow) {
+  if (window === "all") {
+    return "All historical words with at least one wrong answer.";
+  }
+
+  return `Words with at least 40% wrong answers in the last ${window} days.`;
 }
 
 function getProblemWordsForClasses(

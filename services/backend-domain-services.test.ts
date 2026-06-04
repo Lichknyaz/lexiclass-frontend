@@ -610,9 +610,17 @@ describe("backend domain services", () => {
       await service.getTeacherAnalytics("class 1"),
       analytics,
     );
+    assert.deepEqual(
+      await service.getTeacherAnalytics({
+        classId: "class 1",
+        problemWordWindow: "all",
+      }),
+      analytics,
+    );
     assert.deepEqual(calls, [
       "/teacher/analytics",
-      "/teacher/analytics?classId=class%201",
+      "/teacher/analytics?classId=class+1",
+      "/teacher/analytics?classId=class+1&problemWordWindow=all",
     ]);
   });
 });

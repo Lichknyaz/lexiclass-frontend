@@ -18,6 +18,7 @@ import {
   authService,
   classesService,
   wordSetsService,
+  type ProblemWordWindow,
   type TeacherAnalytics,
 } from "@/services";
 import type {
@@ -179,13 +180,24 @@ export function TeacherWordSetDetailsClientPage({
 }
 
 export function TeacherAnalyticsClientPage() {
-  const state = useTeacherData(() => analyticsService.getTeacherAnalytics());
+  const [problemWordWindow, setProblemWordWindow] =
+    useState<ProblemWordWindow>("14");
+  const state = useTeacherData(
+    () => analyticsService.getTeacherAnalytics({ problemWordWindow }),
+    [problemWordWindow],
+  );
 
   if (state.status !== "ready") {
     return <TeacherDataState state={state} title="Analytics" />;
   }
 
-  return <TeacherAnalyticsPage analytics={state.data} />;
+  return (
+    <TeacherAnalyticsPage
+      analytics={state.data}
+      problemWordWindow={problemWordWindow}
+      onProblemWordWindowChange={setProblemWordWindow}
+    />
+  );
 }
 
 function useTeacherData<TData>(

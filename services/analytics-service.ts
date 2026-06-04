@@ -11,8 +11,17 @@ import {
 
 export type { TeacherAnalytics };
 
+export type ProblemWordWindow = "14" | "30" | "90" | "all";
+
+export interface TeacherAnalyticsOptions {
+  classId?: string;
+  problemWordWindow?: ProblemWordWindow;
+}
+
 export interface AnalyticsService {
-  getTeacherAnalytics(classId?: string): Promise<TeacherAnalytics>;
+  getTeacherAnalytics(
+    classIdOrOptions?: string | TeacherAnalyticsOptions,
+  ): Promise<TeacherAnalytics>;
 }
 
 export function createAnalyticsService({
@@ -25,14 +34,28 @@ export function createAnalyticsService({
   const usesBackend = () => dataSource === "backend" || (!dataSource && isBackendMode());
 
   return {
-    async getTeacherAnalytics(classId) {
+    async getTeacherAnalytics(classIdOrOptions) {
       if (!usesBackend()) {
         return mockAnalyticsService.getTeacherAnalytics();
       }
 
-      const query = classId ? `?classId=${encodeURIComponent(classId)}` : "";
+      const options =
+        typeof classIdOrOptions === "string"
+          ? { classId: classIdOrOptions }
+          : classIdOrOptions;
+      const query = new URLSearchParams();
 
-      return client.get<TeacherAnalytics>(`/teacher/analytics${query}`);
+      if (options?.classId) {
+        query.set("classId", options.classId);
+      }
+
+      if (options?.problemWordWindow) {
+        query.set("problemWordWindow", options.problemWordWindow);
+      }
+
+      const queryString = query.toString() ? `?${query.toString()}` : "";
+
+      return client.get<TeacherAnalytics>(`/teacher/analytics${queryString}`);
     },
   };
 }

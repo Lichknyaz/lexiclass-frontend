@@ -57,5 +57,7 @@ export {
 } from "./practice-service";
 export {
   analyticsService,
+  type ProblemWordWindow,
   type TeacherAnalytics,
+  type TeacherAnalyticsOptions,
 } from "./analytics-service";
