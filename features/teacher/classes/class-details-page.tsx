@@ -417,62 +417,64 @@ export function ClassDetailsPage({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Completion</TableHead>
-                        <TableHead className="text-right">Answers</TableHead>
-                        <TableHead>Last practice</TableHead>
-                        <TableHead className="w-12 text-right">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredStudents.map((student) => (
-                        <TableRow key={student.id}>
-                          <TableCell>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {student.email}
-                            </div>
-                          </TableCell>
-                          <TableCell className="min-w-36">
-                            <div className="flex items-center gap-3">
-                              <Progress
-                                value={student.progress}
-                                className="h-2"
-                              />
-                              <span className="w-10 text-right text-sm font-medium">
-                                {student.progress}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="font-medium">
-                              {student.correctAnswers}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {" "}
-                              / {student.wrongAnswers} wrong
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {student.lastPracticedAt}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <StudentActionsMenu
-                              student={student}
-                              onViewProgress={setProgressDialogStudent}
-                              onEdit={setEditStudentDialogStudent}
-                              onRemove={setRemoveStudentDialogStudent}
-                            />
-                          </TableCell>
+                  <div className="max-h-[560px] overflow-auto pr-1">
+                    <Table>
+                      <TableHeader className="sticky top-0 z-10 bg-card">
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Completion</TableHead>
+                          <TableHead className="text-right">Answers</TableHead>
+                          <TableHead>Last practice</TableHead>
+                          <TableHead className="w-12 text-right">
+                            Actions
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredStudents.map((student) => (
+                          <TableRow key={student.id}>
+                            <TableCell>
+                              <div className="font-medium">{student.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {student.email}
+                              </div>
+                            </TableCell>
+                            <TableCell className="min-w-36">
+                              <div className="flex items-center gap-3">
+                                <Progress
+                                  value={student.progress}
+                                  className="h-2"
+                                />
+                                <span className="w-10 text-right text-sm font-medium">
+                                  {student.progress}%
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className="font-medium">
+                                {student.correctAnswers}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {" "}
+                                / {student.wrongAnswers} wrong
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {student.lastPracticedAt}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <StudentActionsMenu
+                                student={student}
+                                onViewProgress={setProgressDialogStudent}
+                                onEdit={setEditStudentDialogStudent}
+                                onRemove={setRemoveStudentDialogStudent}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -626,7 +628,7 @@ function ProblemWordsCard({
           <div className="mt-1 text-2xl font-semibold">{totalWrongAnswers}</div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex max-h-[440px] flex-col gap-3 overflow-auto pr-1">
           {problemWords.map((word) => {
             const wrongRate = getMistakeRate(word);
 
