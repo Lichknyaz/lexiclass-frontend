@@ -69,6 +69,15 @@ test("teacher assignment, student practice, and analytics work with backend data
     page.locator("[data-slot='card-title']").filter({ hasText: "Problem Words" }),
   ).toBeVisible();
   await expect(page.getByText(term)).toBeVisible();
+
+  await page.goto("/teacher/word-sets");
+  await openWordSet(page, wordSetTitle);
+
+  const wordRow = page
+    .getByRole("row")
+    .filter({ has: page.getByText(term, { exact: true }) });
+  await expect(wordRow).toBeVisible();
+  await expect(wordRow.getByText(/0\s*\/\s*1 wrong/)).toBeVisible();
 });
 
 async function login(page: Page, role: "teacher" | "student") {
