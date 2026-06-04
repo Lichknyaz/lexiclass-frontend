@@ -42,6 +42,31 @@ export interface StudentProfileInput extends StudentInput {
   id: string;
 }
 
+export type ReviewWordSource = "weak" | "all";
+export type ProblemWordWindow = "14" | "30" | "90" | "all";
+
+export interface ReviewWord {
+  wordId: string;
+  term: string;
+  translation: string;
+  transcription: string | null;
+  exampleSentence: string;
+  sourceWordSetId: string;
+  sourceWordSetTitle: string;
+  wrongAnswers: number;
+  correctAnswers: number;
+  affectedStudents: number;
+  wrongRate: number;
+}
+
+export interface CreateReviewWordSetInput {
+  title: string;
+  description?: string;
+  tag?: string;
+  wordIds: string[];
+  assignToClass: boolean;
+}
+
 export interface CreateWordSetInput {
   title: string;
   description: string;
@@ -125,6 +150,7 @@ export interface MockAssignment {
 let practiceAttemptSequence = 0;
 const practiceAttempts: StoredPracticeAttempt[] = [];
 let assignments = createInitialAssignments();
+const localReviewWordSets: MockWordSetDetails[] = [];
 
 export const assignmentsService = {
   async listAssignments(): Promise<MockAssignment[]> {
@@ -137,6 +163,7 @@ export const assignmentsService = {
 
   resetAssignments(nextAssignments = createInitialAssignments()) {
     assignments = clone(nextAssignments);
+    localReviewWordSets.length = 0;
   },
 };
 
@@ -232,6 +259,101 @@ export const classesService = {
     getRequiredClassDetails(classId);
 
     return { studentId };
+  },
+
+  async listClassReviewWords(
+    classId: string,
+    options: {
+      source: ReviewWordSource;
+      problemWordWindow?: ProblemWordWindow;
+    },
+  ): Promise<ReviewWord[]> {
+    const classDetails = getRequiredClassDetails(classId);
+
+    if (options.source === "weak") {
+      return clone(classDetails.problemWords.map((word) =>
+        toReviewWord(word, classDetails),
+      ));
+    }
+
+    return clone(
+      getAssignedClassWords(classDetails)
+        .map(({ word, wordSet }) => ({
+          wordId: word.id,
+          term: word.term,
+          translation: word.translation,
+          transcription: word.transcription ?? null,
+          exampleSentence: word.exampleSentence,
+          sourceWordSetId: wordSet.id,
+          sourceWordSetTitle: wordSet.title,
+          wrongAnswers: 0,
+          correctAnswers: 0,
+          affectedStudents: 0,
+          wrongRate: 0,
+        }))
+        .sort(
+          (first, second) =>
+            first.sourceWordSetTitle.localeCompare(second.sourceWordSetTitle) ||
+            first.term.localeCompare(second.term),
+        ),
+    );
+  },
+
+  async createClassReviewWordSet(
+    classId: string,
+    input: CreateReviewWordSetInput,
+  ): Promise<{
+    wordSet: MockWordSetSummary;
+    assignment: MockAssignment | null;
+  }> {
+    const classDetails = getRequiredClassDetails(classId);
+    const sourceWords = getAssignedClassWords(classDetails).filter(({ word }) =>
+      input.wordIds.includes(word.id),
+    );
+    const selectedWordIds = new Set(sourceWords.map(({ word }) => word.id));
+    const missingWordId = input.wordIds.find((wordId) => !selectedWordIds.has(wordId));
+
+    if (missingWordId) {
+      throw new Error("Selected word not found in this class");
+    }
+
+    const createdAt = new Date().toISOString();
+    const uniqueWords = uniqueWordsByTerm(sourceWords.map(({ word }) => word));
+    const wordSet: MockWordSetDetails = {
+      id: `local-review-set-${Date.now()}`,
+      classId,
+      className: input.tag?.trim() || classDetails.level,
+      title: input.title.trim(),
+      description: input.description?.trim() ?? "",
+      words: uniqueWords.length,
+      assignedStudents: input.assignToClass ? classDetails.students : 0,
+      averageProgress: 0,
+      createdAt,
+      wordsList: uniqueWords.map((word, index) => ({
+        ...word,
+        id: `local-review-word-${Date.now()}-${index}`,
+        masteryLevel: 0,
+        correctAnswers: 0,
+        wrongAnswers: 0,
+      })),
+    };
+
+    localReviewWordSets.push(wordSet);
+
+    const assignment = input.assignToClass
+      ? createAssignmentRecord({ classId, wordSetId: wordSet.id })
+      : null;
+
+    return {
+      wordSet: {
+        id: wordSet.id,
+        title: wordSet.title,
+        description: wordSet.description,
+        words: wordSet.words,
+        assignedClasses: assignment ? 1 : 0,
+      },
+      assignment: clone(assignment),
+    };
   },
 
   async assignWordSet(
@@ -536,7 +658,9 @@ function createAssignmentRecord(input: AssignmentInput) {
 
 function toStudentWordSet(assignment: MockAssignment) {
   const classDetails = getMockClassDetails(assignment.classId);
-  const wordSetDetails = getMockWordSetDetails(assignment.wordSetId);
+  const wordSetDetails =
+    getMockWordSetDetails(assignment.wordSetId) ??
+    localReviewWordSets.find((wordSet) => wordSet.id === assignment.wordSetId);
 
   if (!classDetails || !wordSetDetails) {
     return undefined;
@@ -618,7 +742,7 @@ function aggregateProblemWordsFromAttempts(attempts: StoredPracticeAttempt[]) {
 }
 
 function getMockWord(wordId: string) {
-  for (const wordSet of mockWordSetDetails) {
+  for (const wordSet of [...mockWordSetDetails, ...localReviewWordSets]) {
     const word = wordSet.wordsList.find((item) => item.id === wordId);
 
     if (word) {
@@ -663,13 +787,62 @@ function getRequiredClassDetails(id: string) {
 }
 
 function getRequiredWordSetDetails(id: string) {
-  const wordSet = getMockWordSetDetails(id);
+  const wordSet = getMockWordSetDetails(id) ?? localReviewWordSets.find(
+    (item) => item.id === id,
+  );
 
   if (!wordSet) {
     throw new Error("Word set not found");
   }
 
   return clone(wordSet);
+}
+
+function getAssignedClassWords(classDetails: MockClassDetails) {
+  return assignments
+    .filter((assignment) => assignment.classId === classDetails.id)
+    .flatMap((assignment) => {
+      const wordSet = getRequiredWordSetDetails(assignment.wordSetId);
+
+      return wordSet.wordsList.map((word) => ({ word, wordSet }));
+    });
+}
+
+function toReviewWord(
+  problemWord: MockProblemWord,
+  classDetails: MockClassDetails,
+): ReviewWord {
+  const source = getAssignedClassWords(classDetails).find(
+    ({ word }) => word.id === problemWord.id || word.term === problemWord.term,
+  );
+
+  return {
+    wordId: problemWord.id,
+    term: problemWord.term,
+    translation: problemWord.translation,
+    transcription: source?.word.transcription ?? null,
+    exampleSentence: source?.word.exampleSentence ?? "",
+    sourceWordSetId: source?.wordSet.id ?? "",
+    sourceWordSetTitle: source?.wordSet.title ?? "Assigned word set",
+    wrongAnswers: problemWord.wrongAnswers,
+    correctAnswers: problemWord.correctAnswers,
+    affectedStudents: problemWord.affectedStudents,
+    wrongRate: getMistakeRate(problemWord),
+  };
+}
+
+function uniqueWordsByTerm(words: MockWord[]) {
+  const uniqueWords = new Map<string, MockWord>();
+
+  for (const word of words) {
+    const normalizedTerm = word.term.trim().toLowerCase();
+
+    if (!uniqueWords.has(normalizedTerm)) {
+      uniqueWords.set(normalizedTerm, word);
+    }
+  }
+
+  return Array.from(uniqueWords.values());
 }
 
 function clone<T>(value: T): T {

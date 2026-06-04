@@ -89,6 +89,37 @@ describe("mock domain services", () => {
     );
   });
 
+  it("lists class review words and creates a review word set", async () => {
+    assignmentsService.resetAssignments();
+
+    const weakWords = await classesService.listClassReviewWords("1", {
+      source: "weak",
+      problemWordWindow: "14",
+    });
+    const allWords = await classesService.listClassReviewWords("1", {
+      source: "all",
+    });
+    const created = await classesService.createClassReviewWordSet("1", {
+      title: "Review: English A2",
+      description: "Review set",
+      tag: "A2",
+      wordIds: [allWords[0].wordId],
+      assignToClass: true,
+    });
+    const assignments = await assignmentsService.listAssignments();
+
+    assert.ok(weakWords.length > 0);
+    assert.ok(allWords.length > 0);
+    assert.equal(created.wordSet.title, "Review: English A2");
+    assert.equal(created.wordSet.words, 1);
+    assert.ok(created.assignment);
+    assert.ok(
+      assignments.some(
+        (assignment) => assignment.wordSetId === created.wordSet.id,
+      ),
+    );
+  });
+
   it("loads teacher and student word-set views", async () => {
     const teacherSets = await wordSetsService.listWordSetSummaries();
     const studentSets = await studentService.listAssignedWordSets();

@@ -234,6 +234,89 @@ describe("backend domain services", () => {
     });
   });
 
+  it("maps class review word endpoints", async () => {
+    const calls: Array<{ method: string; path: string; body?: unknown }> = [];
+    const reviewWords = [
+      {
+        wordId: "word-1",
+        term: "arrive",
+        translation: "to arrive",
+        transcription: "uh-RYV",
+        exampleSentence: "We arrive at the airport.",
+        sourceWordSetId: "word-set-1",
+        sourceWordSetTitle: "Travel Basics",
+        wrongAnswers: 2,
+        correctAnswers: 1,
+        affectedStudents: 2,
+        wrongRate: 67,
+      },
+    ];
+    const service = createClassesService({
+      dataSource: "backend",
+      client: createFakeApiClient({
+        get: async (path) => {
+          calls.push({ method: "GET", path });
+          return reviewWords;
+        },
+        post: async (path, body) => {
+          calls.push({ method: "POST", path, body });
+          return {
+            wordSet: {
+              id: "review-set-1",
+              title: "Review",
+              description: "Review set",
+              words: 1,
+              assignedClasses: 1,
+            },
+            assignment: {
+              id: "assignment-1",
+              classId: "class-1",
+              wordSetId: "review-set-1",
+              assignedAt: "2026-06-04T12:00:00.000Z",
+            },
+          };
+        },
+      }),
+    });
+
+    assert.deepEqual(
+      await service.listClassReviewWords("class 1", {
+        source: "weak",
+        problemWordWindow: "all",
+      }),
+      reviewWords,
+    );
+    assert.equal(
+      (
+        await service.createClassReviewWordSet("class-1", {
+          title: "Review",
+          description: "Review set",
+          tag: "A2",
+          wordIds: ["word-1"],
+          assignToClass: true,
+        })
+      ).wordSet.id,
+      "review-set-1",
+    );
+    assert.deepEqual(calls, [
+      {
+        method: "GET",
+        path: "/teacher/classes/class%201/review-words?source=weak&problemWordWindow=all",
+      },
+      {
+        method: "POST",
+        path: "/teacher/classes/class-1/review-word-sets",
+        body: {
+          title: "Review",
+          description: "Review set",
+          tag: "A2",
+          wordIds: ["word-1"],
+          assignToClass: true,
+        },
+      },
+    ]);
+  });
+
   it("maps teacher word-set CRUD to backend endpoints", async () => {
     const calls: Array<{ method: string; path: string; body?: unknown }> = [];
     const details = createWordSetDetails();

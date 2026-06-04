@@ -9,7 +9,11 @@ import type { ApiClient } from "./api-client.ts";
 import {
   classesService as mockClassesService,
   type ClassOverviewInput,
+  type CreateReviewWordSetInput,
   type CreateClassInput,
+  type ProblemWordWindow,
+  type ReviewWord,
+  type ReviewWordSource,
   type StudentInput,
   type StudentProfileInput,
 } from "./mock-services.ts";
@@ -22,7 +26,11 @@ import { formatLastPracticedAt } from "../utils/date-time.ts";
 
 export type {
   ClassOverviewInput,
+  CreateReviewWordSetInput,
   CreateClassInput,
+  ProblemWordWindow,
+  ReviewWord,
+  ReviewWordSource,
   StudentInput,
   StudentProfileInput,
 };
@@ -53,6 +61,20 @@ export interface ClassesService {
     classId: string,
     studentId: string,
   ): Promise<{ studentId: string }>;
+  listClassReviewWords(
+    classId: string,
+    options: {
+      source: ReviewWordSource;
+      problemWordWindow?: ProblemWordWindow;
+    },
+  ): Promise<ReviewWord[]>;
+  createClassReviewWordSet(
+    classId: string,
+    input: CreateReviewWordSetInput,
+  ): Promise<{
+    wordSet: MockWordSetSummary;
+    assignment: { id: string; classId: string; wordSetId: string; assignedAt: string } | null;
+  }>;
   assignWordSet(
     classId: string,
     wordSet: MockWordSetSummary,
@@ -171,6 +193,36 @@ export function createClassesService({
       return client.delete<{ studentId: string }>(
         `/teacher/classes/${classId}/students/${studentId}`,
       );
+    },
+
+    async listClassReviewWords(classId, options) {
+      if (!usesBackend()) {
+        return mockClassesService.listClassReviewWords(classId, options);
+      }
+
+      const searchParams = new URLSearchParams({ source: options.source });
+
+      if (options.problemWordWindow) {
+        searchParams.set("problemWordWindow", options.problemWordWindow);
+      }
+
+      return client.get<ReviewWord[]>(
+        `/teacher/classes/${encodeURIComponent(classId)}/review-words?${searchParams.toString()}`,
+      );
+    },
+
+    async createClassReviewWordSet(classId, input) {
+      if (!usesBackend()) {
+        return mockClassesService.createClassReviewWordSet(classId, input);
+      }
+
+      return client.post<
+        {
+          wordSet: MockWordSetSummary;
+          assignment: { id: string; classId: string; wordSetId: string; assignedAt: string } | null;
+        },
+        CreateReviewWordSetInput
+      >(`/teacher/classes/${encodeURIComponent(classId)}/review-word-sets`, input);
     },
 
     async assignWordSet(classId, wordSet) {

@@ -260,6 +260,79 @@ interface ClassDetailsDto extends ClassSummaryDto {
 }
 ```
 
+### List Class Review Words
+
+```http
+GET /teacher/classes/:classId/review-words?source=weak|all&problemWordWindow=:window
+```
+
+Query parameters:
+
+- `source` required. Allowed values: `weak`, `all`.
+- `problemWordWindow` optional. Allowed values: `14`, `30`, `90`, `all`. Defaults to `14` when `source=weak`.
+
+Response `200`:
+
+```ts
+interface ReviewWordDto {
+  wordId: string;
+  term: string;
+  translation: string;
+  transcription: string | null;
+  exampleSentence: string;
+  sourceWordSetId: string;
+  sourceWordSetTitle: string;
+  wrongAnswers: number;
+  correctAnswers: number;
+  affectedStudents: number;
+  wrongRate: number;
+}
+```
+
+Rules:
+
+- Teacher can access only their own class.
+- `source=weak` returns class problem words based on saved practice attempts.
+- `source=weak` uses the same problem-word window behavior as teacher analytics.
+- `source=all` returns all words from word sets assigned to the class.
+- Duplicate terms from different source word sets remain separate rows.
+
+### Create Class Review Word Set
+
+```http
+POST /teacher/classes/:classId/review-word-sets
+```
+
+Request:
+
+```json
+{
+  "title": "Review: English A2 - Travel",
+  "description": "Review set created from weak words for English A2 - Travel.",
+  "tag": "A2",
+  "wordIds": ["word-id-1", "word-id-2"],
+  "assignToClass": true
+}
+```
+
+Response `201`:
+
+```ts
+interface CreateReviewWordSetResponseDto {
+  wordSet: WordSetSummaryDto;
+  assignment: AssignmentDto | null;
+}
+```
+
+Rules:
+
+- Teacher can create review sets only for their own classes.
+- Selected `wordIds` must belong to word sets already assigned to the class.
+- Backend creates a normal teacher-owned word set and copies selected word fields.
+- Duplicate selected terms are copied once into the new word set.
+- `assignToClass` defaults to `true` in the frontend UI but remains editable.
+- If `assignToClass` is `true`, the backend creates an assignment for the same class so students see the review set as a normal assignment.
+
 ### Update Class
 
 ```http
@@ -800,7 +873,7 @@ Recommended unique constraints:
 Current frontend domain files can map to these endpoints:
 
 - `auth-service.ts` -> `/auth/*`
-- `classes-service.ts` -> `/teacher/classes/*`
+- `classes-service.ts` -> `/teacher/classes/*`, including class review word-set creation
 - `word-sets-service.ts` -> `/teacher/word-sets/*` and `/student/word-sets/*`
 - `assignments-service.ts` -> `/teacher/assignments`, `/student/assignments`
 - `practice-service.ts` -> `/student/practice-sessions`
