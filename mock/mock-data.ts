@@ -335,6 +335,7 @@ export const mockStudentClasses: MockStudentClass[] = [
 export const mockStudentProgressWords: MockStudentProgressWord[] = [
   {
     id: "sp1",
+    assignmentId: "1-w1",
     term: "borrow",
     translation: "take and return later",
     masteryLevel: 42,
@@ -344,6 +345,7 @@ export const mockStudentProgressWords: MockStudentProgressWord[] = [
   },
   {
     id: "sp2",
+    assignmentId: "1-w2",
     term: "receipt",
     translation: "proof of payment",
     masteryLevel: 55,
@@ -353,6 +355,7 @@ export const mockStudentProgressWords: MockStudentProgressWord[] = [
   },
   {
     id: "sp3",
+    assignmentId: "1-w1",
     term: "wake up",
     translation: "get out of sleep",
     masteryLevel: 86,

@@ -57,6 +57,7 @@ test("student progress page reflects saved practice attempts", async ({
 
   await page.getByRole("button", { name: "Weak" }).click();
   await expect(progressRow).toBeVisible();
+  await expect(page.getByRole("link", { name: "Practice weak words" })).toHaveCount(0);
 });
 
 async function login(page: Page, role: "teacher" | "student") {

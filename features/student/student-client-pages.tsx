@@ -107,7 +107,13 @@ export function StudentWordSetDetailsClientPage({ id }: { id: string }) {
   );
 }
 
-export function StudentPracticeClientPage({ id }: { id: string }) {
+export function StudentPracticeClientPage({
+  id,
+  initialWordScope = "all",
+}: {
+  id: string;
+  initialWordScope?: "all" | "weak";
+}) {
   const state = useStudentData<StudentWordSetData>(async () => {
     const [wordSet, wordSetDetails] = await Promise.all([
       studentService.getAssignedWordSet(id),
@@ -128,7 +134,13 @@ export function StudentPracticeClientPage({ id }: { id: string }) {
     return <StudentNotFound title="Word set not found" />;
   }
 
-  return <PracticePage wordSet={state.data.wordSet} words={state.data.words} />;
+  return (
+    <PracticePage
+      wordSet={state.data.wordSet}
+      words={state.data.words}
+      initialWordScope={initialWordScope}
+    />
+  );
 }
 
 function useStudentData<TData>(

@@ -210,13 +210,13 @@ export function StudentDashboardPage({
   );
 }
 
-type WordSetFilter = "all" | "due-today" | "completed" | "weak";
+type WordSetFilter = "all" | "due-today" | "completed" | "low-completion";
 
 const wordSetFilterOptions: Array<{ label: string; value: WordSetFilter }> = [
   { label: "All", value: "all" },
   { label: "Due today", value: "due-today" },
   { label: "Completed", value: "completed" },
-  { label: "Weak", value: "weak" },
+  { label: "Low completion", value: "low-completion" },
 ];
 
 function getContinueWordSet(wordSets: MockStudentWordSet[]) {
@@ -246,7 +246,7 @@ function matchesWordSetFilter(
     return wordSet.completedWords >= wordSet.words || wordSet.progress >= 100;
   }
 
-  if (filter === "weak") {
+  if (filter === "low-completion") {
     return wordSet.progress < 60;
   }
 

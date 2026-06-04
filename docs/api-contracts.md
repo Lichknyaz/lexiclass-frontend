@@ -721,6 +721,7 @@ Response `200`:
 ```ts
 interface StudentProgressWordDto {
   id: string;
+  assignmentId: string;
   term: string;
   translation: string;
   masteryLevel: number;

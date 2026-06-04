@@ -136,19 +136,14 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardHeader>
               <CardTitle>Weak Words</CardTitle>
-              <Button size="sm" asChild>
-                <Link href="/student/word-sets/1-w1/practice?mode=weak">
-                  Practice weak words
-                </Link>
-              </Button>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
               {weakWords.map((word) => (
                 <Link
                   key={word.id}
-                  href="/student/word-sets/1-w1/practice?mode=weak"
+                  href={`/student/word-sets/${word.assignmentId}/practice?mode=weak`}
                   className="rounded-lg border p-3 transition-colors hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-3">

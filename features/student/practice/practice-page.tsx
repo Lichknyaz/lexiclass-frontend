@@ -43,11 +43,16 @@ const practiceModes: Array<{
 interface PracticePageProps {
   wordSet: MockStudentWordSet;
   words: MockWord[];
+  initialWordScope?: WordScope;
 }
 
-export function PracticePage({ wordSet, words: allWords }: PracticePageProps) {
+export function PracticePage({
+  wordSet,
+  words: allWords,
+  initialWordScope = "all",
+}: PracticePageProps) {
   const [mode, setMode] = useState<PracticeMode>("flashcard");
-  const [wordScope, setWordScope] = useState<WordScope>("all");
+  const [wordScope, setWordScope] = useState<WordScope>(initialWordScope);
   const [started, setStarted] = useState(false);
   const [sessionWords, setSessionWords] = useState<MockWord[]>([]);
   const [attempts, setAttempts] = useState<PracticeAttemptInput[]>([]);
@@ -361,15 +366,41 @@ function getWeakWordsForSession(
   words: MockWord[],
   attempts: PracticeAttemptInput[],
 ) {
-  const wrongWordIds = new Set(
-    attempts
-      .filter((attempt) => attempt.status === "wrong")
-      .map((attempt) => attempt.wordId),
-  );
+  const currentSessionAttemptsByWord = attempts.reduce<
+    Map<string, { correct: number; wrong: number }>
+  >((attemptsByWord, attempt) => {
+    const existing = attemptsByWord.get(attempt.wordId) ?? {
+      correct: 0,
+      wrong: 0,
+    };
 
-  return words.filter(
-    (word) => word.masteryLevel < 60 || wrongWordIds.has(word.id),
-  );
+    if (attempt.status === "correct") {
+      existing.correct += 1;
+    } else {
+      existing.wrong += 1;
+    }
+
+    attemptsByWord.set(attempt.wordId, existing);
+
+    return attemptsByWord;
+  }, new Map());
+
+  return words.filter((word) => {
+    const currentSessionAttempts =
+      currentSessionAttemptsByWord.get(word.id) ?? {
+        correct: 0,
+        wrong: 0,
+      };
+    const correctAnswers = word.correctAnswers + currentSessionAttempts.correct;
+    const wrongAnswers = word.wrongAnswers + currentSessionAttempts.wrong;
+    const totalAnswers = correctAnswers + wrongAnswers;
+    const projectedMastery =
+      totalAnswers === 0
+        ? word.masteryLevel
+        : Math.round((correctAnswers / totalAnswers) * 100);
+
+    return projectedMastery < 60;
+  });
 }
 
 interface SetupCardProps {

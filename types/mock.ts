@@ -91,6 +91,7 @@ export interface MockStudentWordSet {
 
 export interface MockStudentProgressWord {
   id: string;
+  assignmentId: string;
   term: string;
   translation: string;
   masteryLevel: number;

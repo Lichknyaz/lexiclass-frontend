@@ -491,6 +491,7 @@ describe("backend domain services", () => {
           return [
             {
               id: "word-1",
+              assignmentId: "assignment-1",
               term: "journey",
               translation: "подорож",
               masteryLevel: 50,
@@ -516,6 +517,7 @@ describe("backend domain services", () => {
           return [
             {
               id: "word-1",
+              assignmentId: "assignment-1",
               term: "journey",
               translation: "подорож",
               masteryLevel: 50,
