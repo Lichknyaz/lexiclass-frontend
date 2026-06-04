@@ -12,6 +12,14 @@ Base URL for local development:
 http://localhost:4000/api/v1
 ```
 
+Interactive Swagger documentation for the implemented backend:
+
+```text
+http://localhost:4000/api/docs
+```
+
+Swagger uses the same JWT access token returned by `POST /api/v1/auth/login`.
+
 All authenticated endpoints use:
 
 ```http
@@ -39,7 +47,7 @@ Accept: application/json
 
 ```ts
 type UserRole = "teacher" | "student";
-type PracticeMode = "flashcard" | "multiple-choice" | "writing";
+type PracticeMode = "flashcard" | "multiple_choice" | "writing";
 type AnswerStatus = "correct" | "wrong";
 
 interface UserDto {
@@ -105,6 +113,22 @@ interface ProblemWordDto {
   wrongAnswers: number;
   correctAnswers: number;
   affectedStudents: number;
+}
+```
+
+## Health
+
+### Health Check
+
+```http
+GET /health
+```
+
+Response `200`:
+
+```json
+{
+  "status": "ok"
 }
 ```
 
@@ -568,7 +592,8 @@ AssignmentDto
 Rules:
 
 - Assignment is unique by `classId + wordSetId`.
-- If the assignment already exists, return the existing assignment with `200` or return `409` with a useful error code. Prefer returning existing assignment for simpler frontend behavior.
+- Creating an existing assignment returns the existing assignment record.
+- The current NestJS endpoint responds with the standard POST `201` status for both newly created and existing assignment records.
 
 ### List Assignments
 
@@ -637,6 +662,8 @@ Request:
 ```
 
 Backend derives `studentId` from the authenticated user. The frontend may keep sending `studentId` during mock mode, but the backend should not trust client-provided identity.
+
+API practice mode values are `flashcard`, `multiple_choice`, and `writing`. The frontend maps its internal UI value `multiple-choice` to API value `multiple_choice` before sending backend requests.
 
 Response `201`:
 
