@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Target, TrendingDown, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -100,8 +101,9 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
+              <div className="max-h-[560px] overflow-auto pr-1">
+                <Table>
+                  <TableHeader className="sticky top-0 z-10 bg-card">
                   <TableRow>
                     <TableHead>Word</TableHead>
                     <TableHead>Translation</TableHead>
@@ -130,8 +132,9 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
                       </TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
@@ -139,40 +142,60 @@ export function StudentProgressPage({ progressWords }: StudentProgressPageProps)
             <CardHeader>
               <CardTitle>Weak Words</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              {weakWords.map((word) => (
-                <Link
-                  key={word.id}
-                  href={`/student/word-sets/${word.assignmentId}/practice?mode=weak`}
-                  className="rounded-lg border p-3 transition-colors hover:bg-muted/40"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{word.term}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {word.translation}
+            <CardContent>
+              <div className="mb-4 rounded-lg border bg-muted/40 p-4">
+                <div className="text-sm text-muted-foreground">
+                  Weak words tracked
+                </div>
+                <div className="mt-1 text-2xl font-semibold">
+                  {weakWords.length}
+                </div>
+              </div>
+              <div className="flex max-h-[440px] flex-col gap-3 overflow-auto pr-1">
+                {weakWords.map((word) => (
+                  <Link
+                    key={word.id}
+                    href={`/student/word-sets/${word.assignmentId}/practice?mode=weak`}
+                    className="rounded-lg border p-3 transition-colors hover:bg-muted/40"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-medium">{word.term}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {word.translation}
+                        </div>
                       </div>
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-destructive/30 text-destructive"
+                      >
+                        {word.masteryLevel}% mastery
+                      </Badge>
                     </div>
-                    <span className="text-sm font-medium text-destructive">
-                      {word.masteryLevel}%
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{word.wrongCount} wrong answers</span>
-                    <span>{word.lastPracticedAt}</span>
-                  </div>
-                  <Progress
-                    value={word.masteryLevel}
-                    className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
-                  />
-                </Link>
-              ))}
+                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {word.wrongCount}{" "}
+                        {pluralize("wrong answer", word.wrongCount)}
+                      </span>
+                      <span>{word.lastPracticedAt}</span>
+                    </div>
+                    <Progress
+                      value={word.masteryLevel}
+                      className="mt-2 h-2 [&_[data-slot=progress-indicator]]:bg-destructive"
+                    />
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </section>
       </div>
     </StudentShell>
   );
+}
+
+function pluralize(label: string, count: number) {
+  return count === 1 ? label : `${label}s`;
 }
 
 function matchesProgressWordFilter(
