@@ -22,7 +22,7 @@ test("student progress page reflects saved practice attempts", async ({
     translation: "контрольна точка",
     example: "The checkpoint confirmed the route.",
   });
-  await assignCurrentWordSetToClass(page, "English A2");
+  await assignCurrentWordSetToClass(page, "English A2 - Travel");
 
   await clearSession(page);
   await login(page, "student");

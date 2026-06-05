@@ -36,7 +36,7 @@ test("teacher assignment, student practice, and analytics work with backend data
     translation: "route plan",
     example: "We checked the itinerary before leaving.",
   });
-  await assignCurrentWordSetToClass(page, "English A2");
+  await assignCurrentWordSetToClass(page, "English A2 - Travel");
 
   await logoutByClearingSession(page);
   await login(page, "student");

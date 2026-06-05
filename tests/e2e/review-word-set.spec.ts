@@ -25,7 +25,7 @@ test("teacher creates and assigns a review word set from class weak words", asyn
   await expect(
     dialog.getByRole("checkbox", { name: "Assign to this class" }),
   ).toBeChecked();
-  await expect(dialog.getByText(/wrong answer/)).toBeVisible();
+  await expect(dialog.getByText(/wrong answer/).first()).toBeVisible();
 
   await dialog.getByLabel("Title").fill(reviewTitle);
   await dialog
