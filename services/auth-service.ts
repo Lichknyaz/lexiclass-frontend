@@ -144,7 +144,6 @@ export function createAuthService({
         try {
           await apiClient.post<null, Record<string, never>>("/auth/logout", {});
         } catch {
-          // Local session cleanup should still happen if the token is stale.
         }
       }
 
